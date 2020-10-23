@@ -5,24 +5,19 @@ pragma solidity ^0.6.0;
 import "./SaveToken.sol";
 
 contract SaveTokenFactory {
-    
-    constructor() 
-        public
-    {}
+    constructor() public {}
 
-    function createSaveToken(
-        address assetAdapter,
-        address assetToken,
-        address insuranceAdapter,
-        address insuranceToken
-        )
-    public
-    {
-        SaveToken saveToken = new SaveToken(
-            assetAdapter,
-            assetToken,
-            insuranceAdapter,
-            insuranceToken
-        );
-    }
+    // function createSaveToken(
+    //     address assetAdapter, // comound
+    //     address assetToken, // cDai
+    //     address insuranceAdapter, // opyn
+    //     address insuranceToken // ocDai
+    // ) public {
+    //     SaveToken saveToken = new saveToken(
+    //         assetAdapter,
+    //         assetToken,
+    //         insuranceAdapter,
+    //         insuranceToken
+    //     );
+    // }
 }
