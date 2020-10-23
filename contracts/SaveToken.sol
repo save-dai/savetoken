@@ -1,71 +1,78 @@
-// SPDX-License-Identifier: MIT
-
 pragma solidity ^0.6.0;
+pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./interfaces/IAsset.sol";
+import "./libraries/StorageLib.sol";
+import "./libraries/ERC20StorageLib.sol";
+import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
+import "./interfaces/IAsset.sol";
+import "./token/ERC20.sol";
 
-// A Single cut Diamond
 contract SaveToken is ERC20 {
-
-    IAsset public assetInterface;
-    IInsurance public insuranceInterface;
-
     constructor(
-        address assetAdapter,
-        address assetToken,
-        address insuranceAdapter,
-        address insuranceToken
-    )
-        ERC20("SaveToken", "ST")
-        public
-    {
-        assetInterface = IAsset(assetAdapter);
-        insuranceInterface = IInsurance(insuranceAdapter);
+        address _assetAdapter, // Compound
+        address _assetToken, // cDAI
+        address _insuranceAdapter, // Opyn
+        address _insuranceToken, // ocDAI
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) public payable {
+        StorageLib.setAddresses(
+            _assetAdapter,
+            _assetToken,
+            _insuranceAdapter,
+            _insuranceToken
+        );
+
+        ERC20StorageLib.setERC20Metadata(name, symbol, decimals);
+
+        StorageLib.SaveTokenStorage storage st = StorageLib.saveTokenStorage();
+
+        // solhint-disable-next-line
+        st.supportedInterfaces[type(IERC165).interfaceId] = true;
     }
-    /*
-    constructor(
-        IDiamondCut.FacetCut[] memory _diamondCut,
-        address _owner
-        ) payable 
-    {
-        LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0));
-        LibDiamond.setContractOwner(_owner);
 
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-                        
-        // adding ERC165 data
-        ds.supportedInterfaces[type(IERC165).interfaceId] = true;
-        ds.supportedInterfaces[type(IDiamondCut).interfaceId] = true;
-        ds.supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
-        ds.supportedInterfaces[type(IERC173).interfaceId] = true;
+    function mint(address account, uint256 amount) public returns (uint256) {
+        address assetAddress = StorageLib.assetAdapter();
+        address insuranceAddress = StorageLib.insuranceAdapter();
+        bytes memory sigAsset = abi.encodeWithSignature(
+            "hold(uint256)",
+            amount
+        );
+        bytes memory sigInsurance = abi.encodeWithSignature(
+            "buyInsurance(uint256)",
+            amount
+        );
+
+        uint256 assetTokens = _delegatecall(assetAddress, sigAsset);
+        uint256 insuranceTokens = _delegatecall(insuranceAddress, sigInsurance);
+        uint256 total = assetTokens + insuranceTokens;
+        _mint(account, total);
+        return total;
+    }
+
+    function _delegatecall(address contractAddress, bytes memory sig)
+        internal
+        returns (uint256)
+    {
+        uint256 ret;
+        bool success;
+        assembly {
+            let output := mload(0x40)
+            success := delegatecall(
+                gas(),
+                contractAddress,
+                add(sig, 32),
+                mload(sig),
+                output,
+                0x20
+            )
+            ret := mload(output)
+        }
+        return ret;
     }
     
-    // Find facet for function that is called and execute the
-    // function if a facet is found and return any value.
-    fallback() external payable {
-        LibDiamond.DiamondStorage storage ds;
-        bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
-        assembly {
-            ds.slot := position
-        }
-        address facet = address(bytes20(ds.facetAddressAndSelectorPosition[msg.sig].facetAddress));
-        require(facet != address(0), "Diamond: Function does not exist");
-        assembly {
-            calldatacopy(0, 0, calldatasize())
-            let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
-            returndatacopy(0, 0, returndatasize())
-            switch result
-                case 0 {
-                    revert(0, returndatasize())
-                }
-                default {
-                    return(0, returndatasize())
-                }
-        }
-    }
-
+    // solhint-disable-next-line
     receive() external payable {}
-    */
 }
