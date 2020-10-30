@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../interfaces/IAsset.sol";
-import "../interfaces/IInsurance.sol";
+import "./interfaces/IAsset.sol";
+import "./interfaces/IInsurance.sol";
 
 // A Single cut Diamond
 contract SaveToken is ERC20 {
@@ -11,9 +13,23 @@ contract SaveToken is ERC20 {
     IInsurance public insuranceInterface;
 
     constructor(
+        address assetAdapter,
+        address assetToken,
+        address insuranceAdapter,
+        address insuranceToken
+    )
+        ERC20("SaveToken", "ST")
+        public
+    {
+        assetInterface = IAsset(assetAdapter);
+        insuranceInterface = IInsurance(insuranceAdapter);
+    }
+    /*
+    constructor(
         IDiamondCut.FacetCut[] memory _diamondCut,
         address _owner
-        ) payable {
+        ) payable 
+    {
         LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0));
         LibDiamond.setContractOwner(_owner);
 
@@ -51,4 +67,5 @@ contract SaveToken is ERC20 {
     }
 
     receive() external payable {}
+    */
 }

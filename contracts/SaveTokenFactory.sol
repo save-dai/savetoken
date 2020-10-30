@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.6.0;
 
 import "./SaveToken.sol";
@@ -9,18 +11,18 @@ contract SaveTokenFactory {
     {}
 
     function createSaveToken(
-        address assetAdapter, // comound
-        address assetToken, // cDai
-        address insuranceAdapter, // opyn
-        address insuranceToken, // ocDai
+        address assetAdapter,
+        address assetToken,
+        address insuranceAdapter,
+        address insuranceToken
         )
     public
     {
-        SaveToken saveToken = new saveToken(
+        SaveToken saveToken = new SaveToken(
             assetAdapter,
             assetToken,
             insuranceAdapter,
             insuranceToken
-        )
+        );
     }
 }
