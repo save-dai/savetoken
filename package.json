@@ -6,13 +6,22 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "npm run lint:js:fix && npm run lint:sol",
+    "lint:nofix": "npm run lint:js && npm run lint:sol",
+    "lint:js": "./node_modules/.bin/eslint .",
+    "lint:js:fix": "./node_modules/.bin/eslint . --fix",
+    "lint:sol": "./node_modules/.bin/solhint  \"contracts/**/*.sol\""
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@openzeppelin/contracts": "^3.2.0",
-    "@openzeppelin/test-helpers": "^0.5.7"
+    "@openzeppelin/test-helpers": "^0.5.7",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.12.1",
+    "eslint-plugin-babel": "^5.3.1",
+    "eslint-plugin-mocha": "^8.0.0"
   },
   "devDependencies": {},
   "description": ""
