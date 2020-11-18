@@ -9,8 +9,8 @@ library StorageLib {
     struct SaveTokenStorage {
         mapping(bytes4 => bool) supportedInterfaces;
         address assetAdapter;
-        address assetToken;
         address insuranceAdapter;
+        address assetToken;
         address insuranceToken;
     }
 
@@ -24,7 +24,7 @@ library StorageLib {
             st_slot := position
         }
     }
-
+    
     function setAddresses(
         address _assetAdapter,
         address _assetToken,

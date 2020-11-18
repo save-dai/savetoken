@@ -5,8 +5,8 @@ import "../interfaces/IAsset.sol";
 
 contract CompoundAdapter is IAsset {
     function hold(uint256 amount) public override returns (uint256) {
-        // mint cDAI
         return amount;
+        // will include compound's mint functionality
     }
 
     // function getCostofAsset() public override returns (uint256) {
