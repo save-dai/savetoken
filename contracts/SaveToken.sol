@@ -10,20 +10,15 @@ import "./token/ERC20.sol";
 
 contract SaveToken is ERC20 {
     constructor(
-        address _assetAdapter, // Compound
-        address _assetToken, // cDAI
-        address _insuranceAdapter, // Opyn
-        address _insuranceToken, // ocDAI
+        address assetAdapter,
+        address assetToken,
+        address insuranceAdapter,
+        address insuranceToken,
         string memory name,
         string memory symbol,
         uint8 decimals
     ) public payable {
-        StorageLib.setAddresses(
-            _assetAdapter,
-            _assetToken,
-            _insuranceAdapter,
-            _insuranceToken
-        );
+        StorageLib.setAddresses(assetAdapter, assetToken, insuranceAdapter, insuranceToken);
 
         ERC20StorageLib.setERC20Metadata(name, symbol, decimals);
 
