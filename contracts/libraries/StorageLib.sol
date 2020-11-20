@@ -8,6 +8,7 @@ library StorageLib {
 
     struct SaveTokenStorage {
         mapping(bytes4 => bool) supportedInterfaces;
+        address underlyingToken;
         address assetAdapter;
         address insuranceAdapter;
         address assetToken;
@@ -26,16 +27,22 @@ library StorageLib {
     }
     
     function setAddresses(
+        address _underlyingToken;
         address _assetAdapter,
         address _assetToken,
         address _insuranceAdapter,
         address _insuranceToken
     ) internal {
         SaveTokenStorage storage st = saveTokenStorage();
+        st.underlyingToken = _underlyingToken;
         st.assetAdapter = _assetAdapter;
         st.assetToken = _assetToken;
         st.insuranceAdapter = _insuranceAdapter;
         st.insuranceToken = _insuranceToken;
+    }
+
+    function underlyingToken() internal view returns (address underlyingToken_) {
+        underlyingToken_ = saveTokenStorage().underlyingToken;
     }
 
     function assetAdapter() internal view returns (address assetAdapter_) {
