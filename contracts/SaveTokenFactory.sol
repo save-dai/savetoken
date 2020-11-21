@@ -21,6 +21,7 @@ contract SaveTokenFactory {
      * @param insuranceToken The addresses for the insurance token
      */
     function createSaveToken(
+        address underlyingToken,
         address assetAdapter,
         address assetToken,
         address insuranceAdapter,
@@ -30,6 +31,7 @@ contract SaveTokenFactory {
         uint8 decimals
     ) public returns (address) {
         SaveToken saveToken = new SaveToken(
+            underlyingToken,
             assetAdapter,
             assetToken,
             insuranceAdapter,

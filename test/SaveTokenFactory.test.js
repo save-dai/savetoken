@@ -12,8 +12,11 @@ const SaveToken = artifacts.require('SaveToken');
 const CompoundAdapter = artifacts.require('CompoundAdapter');
 const OpynAdapter = artifacts.require('OpynAdapter');
 
+// mainnet addresses
+const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
+const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
+
 contract('SaveTokenFactory', async (accounts) => {
-  const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
   const aaveAdapter = accounts[1];
   const aDaiAddress = accounts[2];
   const ocDaiAddress = accounts[3];
@@ -22,13 +25,14 @@ contract('SaveTokenFactory', async (accounts) => {
 
   before(async () => {
     saveTokenFactory = await SaveTokenFactory.new();
-    compoundAdapter = await CompoundAdapter.new();
+    compoundAdapter = await CompoundAdapter.new(cDaiAddress);
     opynAdapter = await OpynAdapter.new();
   });
 
   describe('createSaveToken', function () {
     it('should deploy saveToken and add address to the saveTokens array', async () => {
       saveToken = await saveTokenFactory.createSaveToken(
+        daiAddress,
         compoundAdapter.address,
         cDaiAddress,
         opynAdapter.address,
@@ -44,6 +48,7 @@ contract('SaveTokenFactory', async (accounts) => {
 
     it('should emit SaveTokenCreated event', async () => {
       const { logs }  = await saveTokenFactory.createSaveToken(
+        daiAddress,
         compoundAdapter.address,
         cDaiAddress,
         opynAdapter.address,
@@ -56,6 +61,7 @@ contract('SaveTokenFactory', async (accounts) => {
     });
     it('should set token metadata', async () => {
       saveToken = await saveTokenFactory.createSaveToken(
+        daiAddress,
         compoundAdapter.address,
         cDaiAddress,
         opynAdapter.address,

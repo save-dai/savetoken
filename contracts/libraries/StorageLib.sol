@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
@@ -27,7 +29,7 @@ library StorageLib {
     }
     
     function setAddresses(
-        address _underlyingToken;
+        address _underlyingToken,
         address _assetAdapter,
         address _assetToken,
         address _insuranceAdapter,
