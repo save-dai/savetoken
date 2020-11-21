@@ -12,7 +12,11 @@ contract OpynAdapter is IInsurance {
     //     return amount + 100;
     // }
 
-    function buyInsurance(uint256 amount) public override returns (uint256) {
+    function buyInsurance(uint256 amount) 
+        public 
+        override(IInsurance)
+        returns (uint256) 
+    {
         return amount;
     }
 }
