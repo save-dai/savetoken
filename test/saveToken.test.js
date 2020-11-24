@@ -20,110 +20,104 @@ contract('SaveToken', async (accounts) => {
   const aDaiAddress = accounts[1];
   const ocDaiAddress = accounts[2];
 
-  describe('one saveToken', function () {
-    before(async () => {
-      compoundAdapter = await CompoundAdapter.new(cDaiAddress);
-      opynAdapter = await OpynAdapter.new();
+  describe('mint', function () {
+    context('one saveToken', function () {
+      before(async () => {
+        compoundAdapter = await CompoundAdapter.new();
+        opynAdapter = await OpynAdapter.new();
 
-      saveToken = await SaveToken.new(
-        daiAddress,
-        compoundAdapter.address,
-        cDaiAddress,
-        opynAdapter.address,
-        ocDaiAddress,
-        'SaveDAI',
-        'SDT',
-        8,
-      );
-      saveTokenAddress = saveToken.address;
+        saveToken = await SaveToken.new(
+          daiAddress,
+          compoundAdapter.address,
+          cDaiAddress,
+          opynAdapter.address,
+          ocDaiAddress,
+          'SaveDAI',
+          'SDT',
+          8,
+        );
 
-      // instantiate mock tokens
-      daiInstance = await ERC20.at(daiAddress);
+        saveToken2 = await SaveToken.new(
+          daiAddress,
+          compoundAdapter.address,
+          aDaiAddress,
+          opynAdapter.address,
+          ocDaiAddress,
+          'SaveUSDC',
+          'SUT',
+          8,
+        );
+        saveTokenAddress = saveToken.address;
 
-      // Send eth to userAddress to have gas to send an ERC20 tx.
-      await web3.eth.sendTransaction({
-        from: owner,
-        to: userWallet,
-        value: ether('10'),
+        // instantiate mock tokens
+        daiInstance = await ERC20.at(daiAddress);
+
+        // Send eth to userAddress to have gas to send an ERC20 tx.
+        await web3.eth.sendTransaction({
+          from: owner,
+          to: userWallet,
+          value: ether('10'),
+        });
+
+        await daiInstance.approve(saveTokenAddress, ether('1'), { from: userWallet });
+        await daiInstance.approve(saveToken2.address, ether('1'), { from: userWallet });
       });
 
-      await daiInstance.approve(saveTokenAddress, ether('1'), { from: userWallet });
+      it('should return token metadata', async () => {
+        const name = await saveToken.name.call();
+        const symbol = await saveToken.symbol.call();
+        const decimals = await saveToken.decimals.call();
+        assert.equal('SaveDAI', name);
+        assert.equal('SDT', symbol);
+        assert.equal(8, decimals.toNumber());
+      });
+      it('should mint saveDAI tokens', async () => {
+        const amount = 119;
+        await saveToken.mint(amount, { from: userWallet });
+        const balance = await saveToken.balanceOf(userWallet);
+        const totalSupply = await saveToken.totalSupply();
+        assert.equal((amount), balance.toNumber());
+        assert.equal((amount), totalSupply.toNumber());
+      });
     });
 
-    it('should return token metadata', async () => {
-      const name = await saveToken.name.call();
-      const symbol = await saveToken.symbol.call();
-      const decimals = await saveToken.decimals.call();
-      assert.equal('SaveDAI', name);
-      assert.equal('SDT', symbol);
-      assert.equal(8, decimals.toNumber());
-    });
-    it('should mint saveDAI tokens', async () => {
-      const amount = 119;
-      await saveToken.mint(amount, { from: userWallet });
-      const balance = await saveToken.balanceOf(userWallet);
-      const totalSupply = await saveToken.totalSupply();
-      assert.equal((amount), balance.toNumber());
-      assert.equal((amount), totalSupply.toNumber());
-    });
-  });
+    context('multiple saveTokens deployed', function () {
+      it('should deploy a new saveToken with new info', async () => {
+        const name = await saveToken2.name.call();
+        const symbol = await saveToken2.symbol.call();
+        const decimals = await saveToken2.decimals.call();
 
-  describe('multiple saveTokens deployed', function () {
-    before(async () => {
-      compoundAdapter = await CompoundAdapter.new(cDaiAddress);
-      opynAdapter = await OpynAdapter.new();
+        assert.equal('SaveUSDC', name);
+        assert.equal('SUT', symbol);
+        assert.equal(8, decimals.toNumber());
+      });
 
-      saveToken = await SaveToken.new(
-        daiAddress,
-        compoundAdapter.address,
-        cDaiAddress,
-        opynAdapter.address,
-        ocDaiAddress,
-        'SaveDAI',
-        'SDT',
-        8,
-      );
+      it('should return different balances for the two saveToken contracts', async () => {
+        const amount = 150;
+        let initialBalance = await saveToken.balanceOf(userWallet);
+        let initialSupply = await saveToken.totalSupply();
 
-      saveToken2 = await SaveToken.new(
-        daiAddress,
-        compoundAdapter.address,
-        aDaiAddress,
-        opynAdapter.address,
-        ocDaiAddress,
-        'SaveUSDC',
-        'SUT',
-        8,
-      );
-    });
+        await saveToken.mint(amount, { from: userWallet });
 
-    it('should deploy a new saveToken with new info', async () => {
-      const name = await saveToken2.name.call();
-      const symbol = await saveToken2.symbol.call();
-      const decimals = await saveToken2.decimals.call();
+        const finalBalance = await saveToken.balanceOf(userWallet);
+        const finalTotalSupply = await saveToken.totalSupply();
 
-      assert.equal('SaveUSDC', name);
-      assert.equal('SUT', symbol);
-      assert.equal(8, decimals.toNumber());
-    });
-
-    it('should return different balances for the two saveToken contracts', async () => {
-      const amount = 150;
-      await saveToken.mint(amount, { from: userWallet });
-      const balance = await saveToken.balanceOf(userWallet);
-      const totalSupply = await saveToken.totalSupply();
-      assert.equal(amount, balance.toNumber());
-      assert.equal(amount, totalSupply.toNumber());
+        assert.equal(amount, (finalBalance.sub(initialBalance)).toNumber());
+        assert.equal(amount, (finalTotalSupply.sub(initialSupply)).toNumber());
 
 
-      const amount2 = 300;
-      await saveToken2.mint(amount2, { from: userWallet });
-      const balance2 = await saveToken2.balanceOf(userWallet);
-      const totalSupply2 = await saveToken2.totalSupply();
+        const amount2 = 300;
+        await saveToken2.mint(amount2, { from: userWallet });
+        const balance2 = await saveToken2.balanceOf(userWallet);
+        const totalSupply2 = await saveToken2.totalSupply();
 
-      assert.equal(amount2, balance2.toNumber());
-      assert.equal(amount2, totalSupply2.toNumber());
+        assert.equal(amount2, balance2.toNumber());
+        assert.equal(amount2, totalSupply2.toNumber());
+      });
     });
   });
+
+
 
   describe('withdrawForUnderlyingAsset', function () {
     it.skip('revert if ths user does not have a farmer address', async () => {

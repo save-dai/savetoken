@@ -18,7 +18,12 @@ contract SaveToken is ERC20 {
     address public insuranceAdapter;
     address public insuranceToken;
     IERC20 public underlyingToken;
-    
+
+    /***************
+    EVENTS
+    ***************/
+    event Mint(uint256 _amount, address _recipient);
+
     constructor(
         address _underlyingTokenAddress,
         address _assetAdapter,
@@ -56,7 +61,7 @@ contract SaveToken is ERC20 {
             amount
         );
         bytes memory signature_insurance = abi.encodeWithSignature(
-            "getCostofInsurance(uint256)",
+            "getCostOfInsuranceToken(uint256)",
             amount
         );
         bytes memory signature_hold = abi.encodeWithSignature(
@@ -69,21 +74,27 @@ contract SaveToken is ERC20 {
         );
 
         uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
-        uint256 oTokenCost = _delegatecall(insuranceAdapter, signature_insurance);
+        uint256 insuranceTokenCost = _delegatecall(insuranceAdapter, signature_insurance);
 
         // transfer total DAI needed
         require(
             underlyingToken.transferFrom(
                 msg.sender,
-                address(this),  
-                (assetCost.add(oTokenCost))
+                address(this),
+                (assetCost.add(insuranceTokenCost))
             )
         );
 
         uint256 assetTokens = _delegatecall(assetAdapter, signature_hold);
         uint256 insuranceTokens = _delegatecall(insuranceAdapter, signature_buy);
 
+        require(assetTokens == amount, "assetTokens must equal amount");
+        require(insuranceTokens == amount, "insuranceTokens must equal amount");
+
         _mint(msg.sender, amount);
+        
+        emit Mint(amount, msg.sender);
+
         return amount;
     }
 
@@ -102,8 +113,8 @@ contract SaveToken is ERC20 {
             amount
         );
 
-        uint256 assetTokens = _delegatecall(assetAdapter, sigAsset);
-        uint256 insuranceTokens = _delegatecall(insuranceAdapter, sigInsurance);
+        _delegatecall(assetAdapter, sigAsset);
+        _delegatecall(insuranceAdapter, sigInsurance);
     }
 
     function _delegatecall(address adapterAddress, bytes memory sig)
