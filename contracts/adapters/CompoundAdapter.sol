@@ -6,7 +6,6 @@ import "../libraries/StorageLib.sol";
 import "../interfaces/IAsset.sol";
 import "../interfaces/ICToken.sol";
 
-
 contract CompoundAdapter is IAsset {
 	using SafeMath for uint256;
 
@@ -40,5 +39,14 @@ contract CompoundAdapter is IAsset {
         uint256 exchangeRate = cDai.exchangeRateCurrent();
       	emit ExchangeRate(exchangeRate);
        	return amount.mul(exchangeRate).add(10**18 - 1).div(10**18);
+    }
+
+    function balanceOf(address account) 
+        external  
+        override(IAsset)
+        returns (uint256) 
+    {
+        cDai = ICToken(StorageLib.assetToken());
+        return cDai.balanceOf(account);
     }
 }
