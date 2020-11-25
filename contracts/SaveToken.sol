@@ -4,25 +4,29 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "rewards-farmer/contracts/FarmerFactory.sol";
 import "./libraries/StorageLib.sol";
 import "./libraries/ERC20StorageLib.sol";
+import "./interfaces/ISaveToken.sol";
 import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
 import "./token/ERC20.sol";
 
-contract SaveToken is ERC20 {
+contract SaveToken is ISaveToken, ERC20, FarmerFactory {
     address public underlyingTokenAddress;
     address public assetAdapter;
     address public assetToken;
     address public insuranceAdapter;
     address public insuranceToken;
+    address public rewardsToken;
+    address public farmerAddress;
     IERC20 public underlyingToken;
 
     /***************
     EVENTS
     ***************/
-    event Mint(uint256 _amount, address _recipient);
+    event Mint(uint256 _amount, address _recipient) ;
 
     constructor(
         address _underlyingTokenAddress,
@@ -30,15 +34,22 @@ contract SaveToken is ERC20 {
         address _assetToken,
         address _insuranceAdapter,
         address _insuranceToken,
+        address _rewardsToken,
+        address _farmerAddress,
         string memory _name,
         string memory _symbol,
         uint8 _decimals
-    ) public payable {
+    )
+        FarmerFactory(_farmerAddress)
+        public
+    {
         underlyingTokenAddress = _underlyingTokenAddress;
         assetAdapter = _assetAdapter;
         assetToken = _assetToken;
         insuranceAdapter = _insuranceAdapter;
         insuranceToken = _insuranceToken;
+        rewardsToken = _rewardsToken;
+        farmerAddress = _farmerAddress;
 
         underlyingToken = IERC20(underlyingTokenAddress);
 
@@ -55,7 +66,11 @@ contract SaveToken is ERC20 {
     /// @notice This function mints SaveTokens
     /// @param amount The number of SaveTokens to mint
     /// @return Returns the total number of SaveTokens minted
-    function mint(uint256 amount) public returns (uint256) {
+    function mint(uint256 amount) 
+        external 
+        override(ISaveToken) 
+        returns (uint256) 
+    {
         bytes memory signature_cost = abi.encodeWithSignature(
             "getCostofAsset(uint256)",
             amount
@@ -72,7 +87,20 @@ contract SaveToken is ERC20 {
             "buyInsurance(uint256)",
             amount
         );
+        /*
+        address proxy;
 
+        // if msg.sender does not have a proxy, deploy proxy
+        if (farmerProxy[msg.sender] == address(0)) {
+            proxy = deployProxy(
+                msg.sender,
+                assetAdapter,
+                underlyingTokenAddress,
+                farmerAddress);
+        } else {
+            proxy = farmerProxy[msg.sender];
+        }
+        */
         uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
         uint256 insuranceTokenCost = _delegatecall(insuranceAdapter, signature_insurance);
 
@@ -102,6 +130,7 @@ contract SaveToken is ERC20 {
     /// @param amount The number of SaveTokens to unbundle
     function withdrawForUnderlyingAsset(uint256 amount)
         external
+        override(ISaveToken)
     {
         bytes memory sigAsset = abi.encodeWithSignature(
             "withdraw(uint256)",
@@ -117,6 +146,9 @@ contract SaveToken is ERC20 {
         _delegatecall(insuranceAdapter, sigInsurance);
     }
 
+    /***************
+    INTERNAL FUNCTIONS
+    ***************/
     function _delegatecall(address adapterAddress, bytes memory sig)
         internal
         returns (uint256)
