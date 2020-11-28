@@ -17,6 +17,7 @@ const OpynAdapter = artifacts.require('OpynAdapter');
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
+const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
 contract('SaveTokenFactory', async (accounts) => {
   const aaveAdapter = accounts[1];
@@ -42,6 +43,7 @@ contract('SaveTokenFactory', async (accounts) => {
         cDaiAddress,
         opynAdapter.address,
         ocDaiAddress,
+        uniswapFactoryAddress,
         compAddress,
         saveTokenFarmerAddress,
         'SaveDAI',
@@ -61,6 +63,7 @@ contract('SaveTokenFactory', async (accounts) => {
         cDaiAddress,
         opynAdapter.address,
         ocDaiAddress,
+        uniswapFactoryAddress,
         compAddress,
         saveTokenFarmerAddress,
         'SaveDAI',
@@ -76,6 +79,7 @@ contract('SaveTokenFactory', async (accounts) => {
         cDaiAddress,
         opynAdapter.address,
         ocDaiAddress,
+        uniswapFactoryAddress,
         compAddress,
         saveTokenFarmerAddress,
         'SaveDAI',

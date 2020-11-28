@@ -19,6 +19,7 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
     address public assetToken;
     address public insuranceAdapter;
     address public insuranceToken;
+    address public uniswapFactory;
     address public rewardsToken;
     address public farmerAddress;
     IERC20 public underlyingToken;
@@ -34,6 +35,7 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
         address _assetToken,
         address _insuranceAdapter,
         address _insuranceToken,
+        address _uniswapFactory,
         address _rewardsToken,
         address _farmerAddress,
         string memory _name,
@@ -50,10 +52,18 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
         insuranceToken = _insuranceToken;
         rewardsToken = _rewardsToken;
         farmerAddress = _farmerAddress;
+        uniswapFactory = _uniswapFactory;
 
         underlyingToken = IERC20(underlyingTokenAddress);
 
-        StorageLib.setAddresses(underlyingTokenAddress, assetAdapter, assetToken, insuranceAdapter, insuranceToken);
+        StorageLib.setAddresses(
+            underlyingTokenAddress, 
+            assetAdapter, 
+            assetToken, 
+            insuranceAdapter, 
+            insuranceToken, 
+            _uniswapFactory
+        );
 
         ERC20StorageLib.setERC20Metadata(_name, _symbol, _decimals);
 
@@ -132,6 +142,9 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
         external
         override(ISaveToken)
     {
+        require(farmerProxy[msg.sender] != address(0), 
+            "The user farmer proxy must exist");
+
         bytes memory sigAsset = abi.encodeWithSignature(
             "withdraw(uint256)",
             amount
