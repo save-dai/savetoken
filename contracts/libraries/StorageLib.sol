@@ -15,6 +15,7 @@ library StorageLib {
         address insuranceAdapter;
         address assetToken;
         address insuranceToken;
+        address uniswapFactory;
     }
 
     function saveTokenStorage()
@@ -33,7 +34,8 @@ library StorageLib {
         address _assetAdapter,
         address _assetToken,
         address _insuranceAdapter,
-        address _insuranceToken
+        address _insuranceToken,
+        address _uniswapFactory
     ) internal {
         SaveTokenStorage storage st = saveTokenStorage();
         st.underlyingToken = _underlyingToken;
@@ -41,6 +43,7 @@ library StorageLib {
         st.assetToken = _assetToken;
         st.insuranceAdapter = _insuranceAdapter;
         st.insuranceToken = _insuranceToken;
+        st.uniswapFactory = _uniswapFactory;
     }
 
     function underlyingToken() internal view returns (address underlyingToken_) {
@@ -61,5 +64,9 @@ library StorageLib {
 
     function insuranceToken() internal view returns (address assetToken_) {
         assetToken_ = saveTokenStorage().insuranceToken;
+    }
+
+    function uniswapFactory() internal view returns (address uniswapFactory_) {
+        uniswapFactory_ = saveTokenStorage().uniswapFactory;
     }
 }

@@ -11,8 +11,6 @@ contract SaveTokenFactory {
 
     event SaveTokenCreated(address addr);
 
-    constructor() public {}
-
     /*
      * @notice creates a new SaveToken contract
      * @param underlyingToken The underlying token address
@@ -29,6 +27,7 @@ contract SaveTokenFactory {
         address assetToken,
         address insuranceAdapter,
         address insuranceToken,
+        address uniswapFactory,
         address rewardsToken,
         address farmerAddress,
         string memory name,
@@ -41,6 +40,7 @@ contract SaveTokenFactory {
             assetToken,
             insuranceAdapter,
             insuranceToken,
+            uniswapFactory,
             rewardsToken,
             farmerAddress,
             name,
