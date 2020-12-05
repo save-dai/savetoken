@@ -44,7 +44,12 @@ contract OpynAdapter is IInsurance {
 
     /// @notice This function instantiates an interface for a given exchange's address
     /// @param _tokenAddress The token's address
-    function _getExchange(address _tokenAddress) internal returns (IUniswapExchange) {
+    function _getExchange(address _tokenAddress) 
+        internal 
+        view 
+        returns 
+        (IUniswapExchange) 
+    {
         address uniswapFactoryAddress = StorageLib.uniswapFactory();
         IUniswapFactory uniswapFactory = IUniswapFactory(uniswapFactoryAddress);
 

@@ -18,11 +18,11 @@ const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const userWallet = '0x897607ab556177b0e0938541073ac1e01c55e483';
 const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
+const cUSDCAddress = '0x39AA39c021dfbaE8faC545936693aC917d5E7563';
+const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 
 contract('SaveToken', async (accounts) => {
   const owner = accounts[0];
-  const aDaiAddress = accounts[1];
-  const ocDaiAddress = accounts[2];
 
   before(async () => {
     // deploys the farmer's logic contract
@@ -31,7 +31,6 @@ contract('SaveToken', async (accounts) => {
     saveTokenFactory = await SaveTokenFactory.new();
     compoundAdapter = await CompoundAdapter.new();
     opynAdapter = await OpynAdapter.new();
-
 
     saveToken = await saveTokenFactory.createSaveToken(
       daiAddress,
@@ -52,7 +51,7 @@ contract('SaveToken', async (accounts) => {
     saveToken2 = await saveTokenFactory.createSaveToken(
       daiAddress,
       compoundAdapter.address,
-      aDaiAddress,
+      cUSDCAddress,
       opynAdapter.address,
       ocDaiAddress,
       uniswapFactoryAddress,
