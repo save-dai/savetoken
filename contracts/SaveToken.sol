@@ -97,7 +97,7 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
             "buyInsurance(uint256)",
             amount
         );
-        /*
+    
         address proxy;
 
         // if msg.sender does not have a proxy, deploy proxy
@@ -110,7 +110,7 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
         } else {
             proxy = farmerProxy[msg.sender];
         }
-        */
+    
         uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
         uint256 insuranceTokenCost = _delegatecall(insuranceAdapter, signature_insurance);
 
