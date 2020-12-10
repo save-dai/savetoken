@@ -1,8 +1,14 @@
 /* eslint-disable prefer-const */
 /* global contract artifacts web3 before it assert */
+const { expect } = require('chai');
 
 const {
+  BN,
   ether,
+  time,
+  balance,
+  expectRevert,
+  expectEvent,
 } = require('@openzeppelin/test-helpers');
 
 const SaveTokenFactory = artifacts.require('SaveTokenFactory');
@@ -11,6 +17,9 @@ const SaveTokenFarmer = artifacts.require('SaveTokenFarmer');
 const CompoundAdapter = artifacts.require('CompoundAdapter');
 const OpynAdapter = artifacts.require('OpynAdapter');
 const ERC20 = artifacts.require('ERC20');
+const ICToken = artifacts.require('ICToken');
+const IOToken = artifacts.require('IOToken');
+const IUniswapFactory = artifacts.require('IUniswapFactory');
 
 // mainnet addresses
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
@@ -20,17 +29,20 @@ const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const cUSDCAddress = '0x39AA39c021dfbaE8faC545936693aC917d5E7563';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
+const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
 
 contract('SaveToken', async (accounts) => {
   const owner = accounts[0];
 
-  before(async () => {
+  beforeEach(async () => {
     // deploys the farmer's logic contract
     saveTokenFarmer = await SaveTokenFarmer.new();
-    saveTokenFarmerAddress = saveTokenFarmer.address;
     saveTokenFactory = await SaveTokenFactory.new();
     compoundAdapter = await CompoundAdapter.new();
     opynAdapter = await OpynAdapter.new();
+
+    compoundAdapterInstance = await CompoundAdapter.at(compoundAdapter.address);
+    opynAdapterInstance = await OpynAdapter.at(opynAdapter.address);
 
     saveToken = await saveTokenFactory.createSaveToken(
       daiAddress,
@@ -39,8 +51,6 @@ contract('SaveToken', async (accounts) => {
       opynAdapter.address,
       ocDaiAddress,
       uniswapFactoryAddress,
-      compAddress,
-      saveTokenFarmerAddress,
       'SaveDAI',
       'SDT',
       8,
@@ -53,10 +63,8 @@ contract('SaveToken', async (accounts) => {
       compoundAdapter.address,
       cUSDCAddress,
       opynAdapter.address,
-      ocDaiAddress,
+      ocUSDCAddress,
       uniswapFactoryAddress,
-      compAddress,
-      saveTokenFarmerAddress,
       'SaveUSDC',
       'SUT',
       8,
@@ -67,6 +75,9 @@ contract('SaveToken', async (accounts) => {
     // instantiate mock tokens
     daiInstance = await ERC20.at(daiAddress);
     compInstance = await ERC20.at(compAddress);
+    ocDaiInstance = await IOToken.at(ocDaiAddress);
+    cDaiInstance = await ICToken.at(cDaiAddress);
+    uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
 
     // Send eth to userAddress to have gas to send an ERC20 tx.
     await web3.eth.sendTransaction({
@@ -75,27 +86,56 @@ contract('SaveToken', async (accounts) => {
       value: ether('10'),
     });
 
-    await daiInstance.approve(saveTokenAddress, ether('1'), { from: userWallet });
+    await daiInstance.approve(saveTokenAddress, ether('10'), { from: userWallet });
     await daiInstance.approve(saveToken2Address, ether('1'), { from: userWallet });
+  });
+
+  it('user wallet should have DAI balance', async () => {
+    const userWalletBalance = await daiInstance.balanceOf(userWallet);
+    expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(ether('0.1')));
+  });
+  it('should send ether to the DAI address', async () => {
+    const ethBalance = await balance.current(userWallet);
+    expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
 
   describe('mint', function () {
     context('one saveToken', function () {
-      it('should return token metadata', async () => {
-        const name = await saveTokenInstance.name.call();
-        const symbol = await saveTokenInstance.symbol.call();
-        const decimals = await saveTokenInstance.decimals.call();
-        assert.equal('SaveDAI', name);
-        assert.equal('SDT', symbol);
-        assert.equal(8, decimals.toNumber());
-      });
-      it('should mint SaveToekns', async () => {
-        const amount = 119;
+
+      it('should mint SaveTokens', async () => {
+        amount = '4892167171';
+
+        // Step 1. Calculate how much DAI is needed for asset
+        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+        exchangeRate = (exchangeRate.toString()) / 1e18;
+        let assetCost = amount * exchangeRate;
+        assetCost = new BN(assetCost.toString());
+
+        // console.log('assetCost', assetCost.toString());
+
+        // Step 2. Calculate how much DAI is needed for insurance
+        let insuranceCost = await saveTokenInstance.getCostOfInsurance.call(amount, { from: userWallet });
+
+        // console.log('insuranceCost', insuranceCost.toString());
+
+        // Step 3. Add costs together, add extra, and approve
+        const totalDaiCost = assetCost.add(insuranceCost);
+        amountToApprove = totalDaiCost.add(new BN(ether('0.1')));
+        // console.log('amountToApprove', amountToApprove.toString());
+
+        await daiInstance.approve(saveTokenAddress, amountToApprove, { from: userWallet });
+
+        // Step 4. mint saveDAI
         await saveTokenInstance.mint(amount, { from: userWallet });
-        const balance = await saveTokenInstance.balanceOf(userWallet);
-        const totalSupply = await saveTokenInstance.totalSupply();
-        assert.equal((amount), balance.toNumber());
-        assert.equal((amount), totalSupply.toNumber());
+
+        const ocDAIbalance = await ocDaiInstance.balanceOf(saveTokenAddress);
+        const cDAIbalance = await cDaiInstance.balanceOf(saveTokenAddress);
+        const saveDaiMinted = await saveTokenInstance.balanceOf(userWallet);
+
+        // all token balances should match
+        assert.equal(cDAIbalance.toString(), amount);
+        assert.equal(ocDAIbalance.toString(), amount);
+        assert.equal(saveDaiMinted.toString(), amount);
       });
     });
 
@@ -110,7 +150,7 @@ contract('SaveToken', async (accounts) => {
         assert.equal(8, decimals.toNumber());
       });
 
-      it('should return different balances for the two SaveToken contracts', async () => {
+      it.skip('should return different balances for the two SaveToken contracts', async () => {
         const amount = 150;
         let initialBalance = await saveTokenInstance.balanceOf(userWallet);
         let initialSupply = await saveTokenInstance.totalSupply();
