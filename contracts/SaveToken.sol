@@ -4,7 +4,7 @@ pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "rewards-farmer/contracts/FarmerFactory.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/StorageLib.sol";
 import "./libraries/ERC20StorageLib.sol";
 import "./interfaces/ISaveToken.sol";
@@ -13,15 +13,15 @@ import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
 import "./token/ERC20.sol";
 
-contract SaveToken is ISaveToken, ERC20, FarmerFactory {
+contract SaveToken is ERC20 {
+    using SafeMath for uint256;
+
     address public underlyingTokenAddress;
     address public assetAdapter;
     address public assetToken;
     address public insuranceAdapter;
     address public insuranceToken;
     address public uniswapFactory;
-    address public rewardsToken;
-    address public farmerAddress;
     IERC20 public underlyingToken;
 
     /***************
@@ -36,22 +36,17 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
         address _insuranceAdapter,
         address _insuranceToken,
         address _uniswapFactory,
-        address _rewardsToken,
-        address _farmerAddress,
         string memory _name,
         string memory _symbol,
         uint8 _decimals
-    )
-        FarmerFactory(_farmerAddress)
+        )
         public
-    {
+        {
         underlyingTokenAddress = _underlyingTokenAddress;
         assetAdapter = _assetAdapter;
         assetToken = _assetToken;
         insuranceAdapter = _insuranceAdapter;
         insuranceToken = _insuranceToken;
-        rewardsToken = _rewardsToken;
-        farmerAddress = _farmerAddress;
         uniswapFactory = _uniswapFactory;
 
         underlyingToken = IERC20(underlyingTokenAddress);
@@ -71,6 +66,7 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
 
         // solhint-disable-next-line
         st.supportedInterfaces[type(IERC165).interfaceId] = true;
+
     }
 
     /// @notice This function mints SaveTokens
@@ -78,49 +74,38 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
     /// @return Returns the total number of SaveTokens minted
     function mint(uint256 amount) 
         external 
-        override(ISaveToken) 
         returns (uint256) 
     {
         bytes memory signature_cost = abi.encodeWithSignature(
-            "getCostofAsset(uint256)",
+            "getCostOfAsset(uint256)",
             amount
         );
         bytes memory signature_insurance = abi.encodeWithSignature(
-            "getCostOfInsuranceToken(uint256)",
+            "getCostOfInsurance(uint256)",
             amount
         );
-        bytes memory signature_hold = abi.encodeWithSignature(
-            "hold(uint256)",
-            amount
-        );
-        bytes memory signature_buy = abi.encodeWithSignature(
-            "buyInsurance(uint256)",
-            amount
-        );
-    
-        address proxy;
 
-        // if msg.sender does not have a proxy, deploy proxy
-        if (farmerProxy[msg.sender] == address(0)) {
-            proxy = deployProxy(
-                msg.sender,
-                assetAdapter,
-                underlyingTokenAddress,
-                farmerAddress);
-        } else {
-            proxy = farmerProxy[msg.sender];
-        }
-    
+        // get cost of tokens to know how much to transfer from user's wallet
         uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
-        uint256 insuranceTokenCost = _delegatecall(insuranceAdapter, signature_insurance);
-
-        // transfer total DAI needed
+        uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
+    
+        // transfer total underlying token needed
         require(
             underlyingToken.transferFrom(
                 msg.sender,
                 address(this),
-                (assetCost.add(insuranceTokenCost))
+                (assetCost.add(insuranceCost))
             )
+        );
+
+        bytes memory signature_hold = abi.encodeWithSignature(
+            "hold(uint256)",
+            assetCost
+        );
+
+        bytes memory signature_buy = abi.encodeWithSignature(
+            "buyInsurance(uint256)",
+            insuranceCost
         );
 
         uint256 assetTokens = _delegatecall(assetAdapter, signature_hold);
@@ -133,31 +118,73 @@ contract SaveToken is ISaveToken, ERC20, FarmerFactory {
         
         emit Mint(amount, msg.sender);
 
-        return amount;
+        return assetTokens;
     }
 
-    /// @notice This function will unbundle your SaveTokens for your underlying asset
-    /// @param amount The number of SaveTokens to unbundle
-    function withdrawForUnderlyingAsset(uint256 amount)
+    // for testing
+    function buyInsurance(uint256 amount)
         external
-        override(ISaveToken)
-    {
-        require(farmerProxy[msg.sender] != address(0), 
-            "The user farmer proxy must exist");
+        returns (uint256)  
+        {
+            bytes memory signature_buy = abi.encodeWithSignature(
+                "buyInsurance(uint256)",
+                amount
+            );
 
-        bytes memory sigAsset = abi.encodeWithSignature(
-            "withdraw(uint256)",
-            amount
-        );
-
-        bytes memory sigInsurance = abi.encodeWithSignature(
-            "sellInsurance(uint256)",
-            amount
-        );
-
-        _delegatecall(assetAdapter, sigAsset);
-        _delegatecall(insuranceAdapter, sigInsurance);
+        uint256 insuranceTokens = _delegatecall(insuranceAdapter, signature_buy);
+        return insuranceTokens;
     }
+
+    // for testing
+    function getCostOfAsset(uint256 amount)
+        external
+        returns (uint256)  
+        {
+            bytes memory signature_cost = abi.encodeWithSignature(
+                "getCostOfAsset(uint256)",
+                amount
+            );
+
+            uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
+            return assetCost;
+    }   
+    // for testing
+    function getCostOfInsurance(uint256 amount)
+        external
+        returns (uint256)  
+        {
+            bytes memory signature_insurance = abi.encodeWithSignature(
+                "getCostOfInsurance(uint256)",
+                amount
+            );
+
+            uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
+            
+            return insuranceCost;
+    }
+
+    // /// @notice This function will unbundle your SaveTokens for your underlying asset
+    // /// @param amount The number of SaveTokens to unbundle
+    // function withdrawForUnderlyingAsset(uint256 amount)
+    //     external
+    //     override(ISaveToken)
+    //     {
+    //     require(farmerProxy[msg.sender] != address(0), 
+    //         "The user farmer proxy must exist");
+
+    //     bytes memory sigAsset = abi.encodeWithSignature(
+    //         "withdraw(uint256)",
+    //         amount
+    //     );
+
+    //     bytes memory sigInsurance = abi.encodeWithSignature(
+    //         "sellInsurance(uint256)",
+    //         amount
+    //     );
+
+    //     _delegatecall(assetAdapter, sigAsset);
+    //     _delegatecall(insuranceAdapter, sigInsurance);
+    // }
 
     /***************
     INTERNAL FUNCTIONS
