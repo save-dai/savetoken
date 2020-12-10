@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IInsurance.sol";
 import "../libraries/StorageLib.sol";
 import "../interfaces/IUniswapExchange.sol";
@@ -13,15 +14,31 @@ contract OpynAdapter is IInsurance {
         external 
         override(IInsurance)
         returns (uint256) 
-    {
-        return amount;
+    {   
+
+        address ocToken = StorageLib.insuranceToken();
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+        IUniswapExchange underlyingExchange = _getExchange(StorageLib.underlyingToken());
+
+        // approve the transfer
+        underlyingToken.approve(address(underlyingExchange), amount );
+
+        return 
+            underlyingExchange.tokenToTokenSwapInput(
+                amount, // tokens sold
+                1, // min_tokens_bought
+                1, // min eth bought
+                1099511627776, // deadline
+                address(ocToken) // token address
+            );
     }
 
     /// @notice This function calculates the premiums to be paid if a buyer wants to
     /// buy oTokens on Uniswap
     /// @param amount The amount of oTOkens to buy
-    function getCostOfInsuranceToken(uint256 amount)
+    function getCostOfInsurance(uint256 amount)
         external
+        view
         override(IInsurance)
         returns (uint256)
     {

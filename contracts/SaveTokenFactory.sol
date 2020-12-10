@@ -28,8 +28,8 @@ contract SaveTokenFactory {
         address insuranceAdapter,
         address insuranceToken,
         address uniswapFactory,
-        address rewardsToken,
-        address farmerAddress,
+        // address rewardsToken,
+        // address farmerAddress,
         string memory name,
         string memory symbol,
         uint8 decimals
@@ -41,8 +41,8 @@ contract SaveTokenFactory {
             insuranceAdapter,
             insuranceToken,
             uniswapFactory,
-            rewardsToken,
-            farmerAddress,
+            // rewardsToken,
+            // farmerAddress,
             name,
             symbol,
             decimals
