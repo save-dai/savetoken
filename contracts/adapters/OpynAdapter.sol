@@ -21,7 +21,7 @@ contract OpynAdapter is IInsurance {
         IUniswapExchange underlyingExchange = _getExchange(StorageLib.underlyingToken());
 
         // approve the transfer
-        underlyingToken.approve(address(underlyingExchange), amount );
+        underlyingToken.approve(address(underlyingExchange), amount);
 
         return 
             underlyingExchange.tokenToTokenSwapInput(
@@ -31,6 +31,28 @@ contract OpynAdapter is IInsurance {
                 1099511627776, // deadline
                 address(ocToken) // token address
             );
+    }
+
+    function sellInsurance(uint256 amount) 
+        external 
+        override(IInsurance)
+        returns (uint256) 
+    {   
+
+        address dai = StorageLib.underlyingToken();
+        IERC20 ocToken = IERC20(StorageLib.insuranceToken());
+        IUniswapExchange ocDaiExchange = _getExchange(StorageLib.insuranceToken());
+
+        // gives uniswap exchange allowance to transfer ocDAI tokens
+        require(ocToken.approve(address(ocDaiExchange), amount));
+
+        return ocDaiExchange.tokenToTokenSwapInput (
+            amount, // tokens sold
+            1, // min_tokens_bought
+            1, // min eth bought
+            1099511627776, // deadline
+            address(dai) // token address
+        );
     }
 
     /// @notice This function calculates the premiums to be paid if a buyer wants to

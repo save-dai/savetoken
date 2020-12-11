@@ -20,6 +20,7 @@ const ERC20 = artifacts.require('ERC20');
 const ICToken = artifacts.require('ICToken');
 const IOToken = artifacts.require('IOToken');
 const IUniswapFactory = artifacts.require('IUniswapFactory');
+const IUniswapExchange = artifacts.require('IUniswapExchange');
 
 // mainnet addresses
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
@@ -33,6 +34,8 @@ const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
 
 contract('SaveToken', async (accounts) => {
   const owner = accounts[0];
+  const amount = '4892167171';
+  const amount2 = '9784334342';
 
   beforeEach(async () => {
     // deploys the farmer's logic contract
@@ -78,6 +81,10 @@ contract('SaveToken', async (accounts) => {
     ocDaiInstance = await IOToken.at(ocDaiAddress);
     cDaiInstance = await ICToken.at(cDaiAddress);
     uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
+    ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
+    ocDaiExchange = await IUniswapExchange.at(ocDaiExchangeAddress);
+    daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
+    daiExchange = await IUniswapExchange.at(daiExchangeAddress);
 
     // Send eth to userAddress to have gas to send an ERC20 tx.
     await web3.eth.sendTransaction({
@@ -100,11 +107,8 @@ contract('SaveToken', async (accounts) => {
   });
 
   describe('mint', function () {
-    context('one saveToken', function () {
-
+    context('one saveToken deployed', function () {
       it('should mint SaveTokens', async () => {
-        amount = '4892167171';
-
         // Step 1. Calculate how much DAI is needed for asset
         let exchangeRate = await cDaiInstance.exchangeRateStored.call();
         exchangeRate = (exchangeRate.toString()) / 1e18;
@@ -151,7 +155,6 @@ contract('SaveToken', async (accounts) => {
       });
 
       it.skip('should return different balances for the two SaveToken contracts', async () => {
-        const amount = 150;
         let initialBalance = await saveTokenInstance.balanceOf(userWallet);
         let initialSupply = await saveTokenInstance.totalSupply();
 
@@ -163,7 +166,6 @@ contract('SaveToken', async (accounts) => {
         assert.equal(amount, (finalBalance.sub(initialBalance)).toNumber());
         assert.equal(amount, (finalTotalSupply.sub(initialSupply)).toNumber());
 
-        const amount2 = 300;
         await saveToken2Instance.mint(amount2, { from: userWallet });
         const balance2 = await saveToken2Instance.balanceOf(userWallet);
         const totalSupply2 = await saveToken2Instance.totalSupply();
@@ -178,17 +180,94 @@ contract('SaveToken', async (accounts) => {
     it.skip('revert if ths user does not have a farmer address', async () => {
 
     });
-    it.skip('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+    it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+      await saveTokenInstance.mint(amount, { from: userWallet });
+      // identify initial balances
+      const cDaiBalanceInitial = await cDaiInstance.balanceOf(saveTokenAddress);
+      const ocDaiBalanceInitial = await ocDaiInstance.balanceOf(saveTokenAddress);
 
+      const cDAIbalance = await cDaiInstance.balanceOf(saveTokenAddress);
+      const ocDAIbalance = await ocDaiInstance.balanceOf(saveTokenAddress);
+
+      // all token balances should match
+      assert.equal(cDAIbalance.toString(), amount);
+      assert.equal(ocDAIbalance.toString(), amount);
+
+      // unbundle userWallet's SaveTokens
+      await saveTokenInstance.withdrawForUnderlyingAsset(amount, { from: userWallet });
+
+      // identify final balances
+      const cDAIbalanceFinal = await cDaiInstance.balanceOf(saveTokenAddress);
+      const ocDAIbalanceFinal = await ocDaiInstance.balanceOf(saveTokenAddress);
+
+      diffIncDai = cDaiBalanceInitial.sub(cDAIbalanceFinal);
+      diffInocDai = ocDaiBalanceInitial.sub(ocDAIbalanceFinal);
+
+      assert.equal(diffIncDai.toString(), amount);
+      assert.equal(ocDAIbalance.toString(), amount);
     });
-    it.skip('should send msg.sender the underlying asset', async () => {
+    it('should send msg.sender the underlying asset', async () => {
+      await saveTokenInstance.mint(amount, { from: userWallet });
 
+      tokenAmount = await saveTokenInstance.balanceOf(userWallet);
+      tokenAmount = tokenAmount.toNumber();
+
+      // idenitfy the user's initialUnderlyingBalance
+      initialUnderlyingBalance = await daiInstance.balanceOf(userWallet);
+
+      // calculate how much DAI is needed for asset
+      let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+      exchangeRate = exchangeRate / 1e18;
+      daiReedem = (tokenAmount * exchangeRate) / 1e18;
+
+      // calculate ocDAI for DAI on uniswap
+      const eth = await ocDaiExchange.getTokenToEthInputPrice(tokenAmount);
+      let daiSwapped = await daiExchange.getEthToTokenInputPrice(eth);
+      daiSwapped = daiSwapped / 1e18;
+
+      // add daiReedem + daiSwapped together, should be really close to diff
+      const daiBoughtTotal = daiReedem + daiSwapped;
+
+      // unbundle userWallet's SaveTokens
+      await saveTokenInstance.withdrawForUnderlyingAsset(amount, { from: userWallet });
+
+      // idenitfy the user's updatedUnderlyingBalance
+      const updatedUnderlyingBalance = await daiInstance.balanceOf(userWallet);
+      const diff = (updatedUnderlyingBalance.sub(initialUnderlyingBalance)) / 1e18;
+
+      assert.approximately(daiBoughtTotal, diff, 0.0000009);
     });
-    it.skip('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
+    it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
+      await saveTokenInstance.mint(amount, { from: userWallet });
+      // unbundle userWallet's SaveTokens
+      const transaction = await saveTokenInstance.withdrawForUnderlyingAsset(amount, { from: userWallet });
+      // assert WithdrawForUnderlyingAsset fires
+      const event = await transaction.logs[7].event;
+      assert.equal(event, 'WithdrawForUnderlyingAsset');
 
+      // assert msg.sender's address emits in the event
+      const userAddress = await transaction.logs[7].args.user;
+      assert.equal(userAddress.toLowerCase(), userWallet);
+
+      // assert the correct amount was withdrawn
+      const insuranceRemovedAmount = await transaction.logs[7].args.amount;
+      assert.equal(insuranceRemovedAmount.toString(), amount);
     });
-    it.skip('should burn the amount of msg.sender\'s SaveTokens', async () => {
+    it('should burn the amount of msg.sender\'s SaveTokens', async () => {
+      await saveTokenInstance.mint(amount, { from: userWallet });
 
+      const initialBalance = await saveTokenInstance.balanceOf(userWallet);
+
+      // unbundle userWallet's SaveTokens
+      await saveTokenInstance.withdrawForUnderlyingAsset(amount, { from: userWallet });
+
+      // Idenitfy the user's finanl balance
+      const finalBalance = await saveTokenInstance.balanceOf(userWallet);
+
+      // Calculate the difference in saveDAI tokens
+      const diff = initialBalance - finalBalance;
+
+      assert.equal(diff, amount);
     });
   });
 });

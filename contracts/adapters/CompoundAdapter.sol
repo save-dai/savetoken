@@ -27,14 +27,34 @@ contract CompoundAdapter is IAsset {
         // approve the transfer
         underlyingToken.approve(address(cToken), amount);
 
-        // identify the current balance of the saveDAI contract
+        // identify the current balance of the SaveToken contract
         uint256 initialBalance = cToken.balanceOf(address(this));
         // mint cToken
         cToken.mint(amount);
-        // identify the updated balance of the saveDAI contract
+        // identify the updated balance of the SaveToken contract
         uint256 updatedBalance = cToken.balanceOf(address(this));
         // return number of cToken tokens minted
         return updatedBalance.sub(initialBalance);
+    }
+
+    function withdraw(uint256 amount) 
+        external  
+        override(IAsset)
+        returns (uint256) 
+    {
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+
+        // identify SaveToken's underlying balance
+        uint256 initialUnderlyingBalance = underlyingToken.balanceOf(address(this));
+
+        ICToken cToken = ICToken(StorageLib.assetToken());
+        // Redeem returns 0 on success
+        require(cToken.redeem(amount) == 0, "redeem function must execute successfully");
+
+        // identify SaveToken's updated underlying balance
+        uint256 updatedUnderlyingBalance = underlyingToken.balanceOf(address(this));
+
+        return updatedUnderlyingBalance.sub(initialUnderlyingBalance);
     }
 
      // calculate underlying needed to mint _amount of cToken and mint tokens
