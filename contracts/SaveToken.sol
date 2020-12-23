@@ -5,8 +5,9 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./libraries/StorageLib.sol";
 import "./libraries/ERC20StorageLib.sol";
+import "./libraries/RewardsLib.sol";
+import "./libraries/StorageLib.sol";
 import "./interfaces/ISaveToken.sol";
 import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
@@ -36,6 +37,7 @@ contract SaveToken is ERC20 {
         address _insuranceAdapter,
         address _insuranceToken,
         address _uniswapFactory,
+        address _rewardsLogic,
         string memory _name,
         string memory _symbol,
         uint8 _decimals
@@ -60,6 +62,10 @@ contract SaveToken is ERC20 {
             _uniswapFactory
         );
 
+        if (_rewardsLogic != address(0)) {
+            RewardsLib.setLogicAddress(_rewardsLogic);
+        }
+ 
         ERC20StorageLib.setERC20Metadata(_name, _symbol, _decimals);
 
         StorageLib.SaveTokenStorage storage st = StorageLib.saveTokenStorage();
@@ -99,8 +105,8 @@ contract SaveToken is ERC20 {
         );
 
         bytes memory signature_hold = abi.encodeWithSignature(
-            "hold(uint256)",
-            assetCost
+            "hold(uint256, address)",
+            assetCost, msg.sender
         );
 
         bytes memory signature_buy = abi.encodeWithSignature(
