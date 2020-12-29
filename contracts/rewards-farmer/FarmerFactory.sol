@@ -2,6 +2,7 @@
 
 pragma solidity ^0.6.0;
 
+import "../libraries/RewardsLib.sol";
 import "./ProxyFactory.sol";
 
  /// @dev Factory contract used to deploy farmer proxy contracts that store interest bearing assets
@@ -22,13 +23,14 @@ contract FarmerFactory is ProxyFactory {
         virtual
         returns (address proxy)
         {
-            bytes memory data = _encodeData(
-                assetToken,
-                underlyingToken,
-                rewardsToken);
-            proxy = deployMinimal(RewardsLib.logicAddress(), data);
-            return proxy;
-        }
+        bytes memory data = _encodeData(
+            assetToken,
+            underlyingToken,
+            rewardsToken
+        );
+        proxy = deployMinimal(RewardsLib.logicAddress(), data);
+        return proxy;
+    }
 
     /// @dev Encodes the data necessary to make low-level call and deploy the farmer proxy.
     /// @param assetToken The address of the interest bearing asset token.
@@ -42,7 +44,7 @@ contract FarmerFactory is ProxyFactory {
         internal
         view
         returns (bytes memory)
-    {
+        {
         bytes4 selector = 0xf8c8765e;
         return abi.encodeWithSelector(
             selector,

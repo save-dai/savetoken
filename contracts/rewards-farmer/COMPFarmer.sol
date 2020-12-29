@@ -4,8 +4,8 @@ pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../interface/IComptrollerLens.sol";
-import "../interface/ICToken.sol";
+import "../interfaces/IComptrollerLens.sol";
+import "../interfaces/ICToken.sol";
 import "./Farmer.sol";
 
  /// @dev The COMPFarmer contract inherits from the base Farmer contract and
@@ -15,8 +15,8 @@ contract COMPFarmer is Farmer {
     using SafeMath for uint256;
 
     // interfaces
-    IERC20 public dai;
-    ICToken public cDai;
+    IERC20 public underlying;
+    ICToken public cToken;
     IERC20 public comp;
 
     /// @dev Initializer function to launch proxy.
@@ -31,9 +31,9 @@ contract COMPFarmer is Farmer {
         address compAddress)
         public
     {
-        Farmer.initialize(assetAdapter);
-        cDai = ICToken(cDaiAddress);
-        dai = IERC20(daiAddress);
+        Farmer.__Farmer_init(assetAdapter);
+        cToken = ICToken(cDaiAddress);
+        underlying = IERC20(daiAddress);
         comp = IERC20(compAddress);
     }
 
@@ -42,17 +42,17 @@ contract COMPFarmer is Farmer {
     /// @return The amount of cDAI minted.
     function mint() public onlyOwner returns (uint256)  {
         // identify the current balance of the contract
-        uint256 daiBalance = dai.balanceOf(address(this));
+        uint256 daiBalance = underlying.balanceOf(address(this));
 
         // approve the transfer
-        dai.approve(address(cDai), daiBalance);
+        underlying.approve(address(cToken), daiBalance);
 
-        uint256 initialBalance = cDai.balanceOf(address(this));
+        uint256 initialBalance = cToken.balanceOf(address(this));
 
         // mint interest bearing token
-        require(cDai.mint(daiBalance) == 0, "Tokens must mint");
+        require(cToken.mint(daiBalance) == 0, "Tokens must mint");
 
-        uint256 updatedBalance = cDai.balanceOf(address(this));
+        uint256 updatedBalance = cToken.balanceOf(address(this));
 
         return updatedBalance.sub(initialBalance);
     }
@@ -62,7 +62,7 @@ contract COMPFarmer is Farmer {
     /// @param amount The amount of cDAI to transfer.
     /// @return Returns true if succesfully executed.
     function transfer(address to, uint256 amount) public onlyOwner returns (bool) {
-        require(cDai.transfer(to, amount), "must transfer");
+        require(cToken.transfer(to, amount), "must transfer");
         return true;
     }
 
@@ -72,11 +72,11 @@ contract COMPFarmer is Farmer {
     /// @param user The address to send the DAI to.
     function redeem(uint256 amount, address user) public onlyOwner {
         // Redeem returns 0 on success
-        require(cDai.redeem(amount) == 0, "redeem function must execute successfully");
+        require(cToken.redeem(amount) == 0, "redeem function must execute successfully");
         
         // identify DAI balance and transfer
-        uint256 daiBalance = dai.balanceOf(address(this));
-        require(dai.transfer(user, daiBalance), "must transfer");
+        uint256 daiBalance = underlying.balanceOf(address(this));
+        require(underlying.transfer(user, daiBalance), "must transfer");
 
         // withdraw reward
         withdrawReward(user);
@@ -85,7 +85,7 @@ contract COMPFarmer is Farmer {
     /// @dev Returns the COMP balance that has accured in the contract.
     /// @return Returns the balance of COMP in the contract.
     function getTotalCOMPEarned() public onlyOwner returns (uint256) {
-        IComptrollerLens comptroller = IComptrollerLens(address(cDai.comptroller()));
+        IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
         comptroller.claimComp(address(this));
 
         uint256 balance = comp.balanceOf(address(this));
@@ -95,7 +95,7 @@ contract COMPFarmer is Farmer {
     /// @dev Allows user to withdraw the accrued COMP tokens at any time.
     /// @param user The address to send the COMP tokens to.
     function withdrawReward(address user) public onlyOwner {
-        IComptrollerLens comptroller = IComptrollerLens(address(cDai.comptroller()));
+        IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
         comptroller.claimComp(address(this));
 
         uint256 balance = comp.balanceOf(address(this));

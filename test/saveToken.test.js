@@ -13,7 +13,7 @@ const {
 
 const SaveTokenFactory = artifacts.require('SaveTokenFactory');
 const SaveToken = artifacts.require('SaveToken');
-const SaveTokenFarmer = artifacts.require('SaveTokenFarmer');
+const COMPFarmer = artifacts.require('COMPFarmer');
 const CompoundAdapter = artifacts.require('CompoundAdapter');
 const OpynAdapter = artifacts.require('OpynAdapter');
 const ERC20 = artifacts.require('ERC20');
@@ -25,7 +25,7 @@ const IUniswapFactory = artifacts.require('IUniswapFactory');
 const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
-const userWallet1 = '0x897607ab556177b0e0938541073ac1e01c55e483';
+const userWallet1 = '0xe8b1764ae2e927c61c0bf15fe39fa508e6bb426d';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
@@ -40,9 +40,9 @@ contract('SaveToken', async (accounts) => {
 
   beforeEach(async () => {
     // deploys the farmer's logic contract
-    saveTokenFarmer = await SaveTokenFarmer.new();
+    compFarmer = await COMPFarmer.new();
     saveTokenFactory = await SaveTokenFactory.new();
-    compoundAdapter = await CompoundAdapter.new();
+    compoundAdapter = await CompoundAdapter.new(compAddress);
     opynAdapter = await OpynAdapter.new();
 
     compoundAdapterInstance = await CompoundAdapter.at(compoundAdapter.address);
@@ -55,26 +55,13 @@ contract('SaveToken', async (accounts) => {
       opynAdapter.address,
       ocDaiAddress,
       uniswapFactoryAddress,
+      compFarmer.address,
       'SaveDAI',
       'SDT',
       8,
     );
     saveDaiAddress = saveToken.logs[0].args.addr;
     saveDaiInstance = await SaveToken.at(saveDaiAddress);
-
-    saveToken2 = await saveTokenFactory.createSaveToken(
-      usdcAddress,
-      compoundAdapter.address,
-      cUSDCAddress,
-      opynAdapter.address,
-      ocUSDCAddress,
-      uniswapFactoryAddress,
-      'SaveUSDC',
-      'SUT',
-      8,
-    );
-    saveUsdcAddress = saveToken2.logs[0].args.addr;
-    saveUsdcInstance = await SaveToken.at(saveUsdcAddress);
 
     // instantiate mock tokens
     daiInstance = await ERC20.at(daiAddress);
@@ -91,21 +78,13 @@ contract('SaveToken', async (accounts) => {
       value: ether('1'),
     });
 
-    // Send eth to userAddress to have gas to send an ERC20 tx.
-    await web3.eth.sendTransaction({
-      from: owner,
-      to: userWallet2,
-      value: ether('1'),
-    });
-
     await daiInstance.approve(saveDaiAddress, ether('10'), { from: userWallet1 });
-    await daiInstance.approve(saveUsdcAddress, ether('10'), { from: userWallet2 });
   });
   it('user wallet should have DAI balance', async () => {
     const userWalletBalance = await daiInstance.balanceOf(userWallet1);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
-  it('user wallet should have USDC balance', async () => {
+  it('user wallet2 should have USDC balance', async () => {
     const userWalletBalance = await usdcInstance.balanceOf(userWallet2);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(1000));
   });
@@ -116,7 +95,6 @@ contract('SaveToken', async (accounts) => {
 
   describe('mint', function () {
     context('one saveToken', function () {
-
       it('should mint SaveTokens', async () => {
         amount = '4892167171';
 
@@ -125,12 +103,10 @@ contract('SaveToken', async (accounts) => {
         exchangeRate = (exchangeRate.toString()) / 1e18;
         let assetCost = amount * exchangeRate;
         assetCost = new BN(assetCost.toString());
-
         // console.log('assetCost', assetCost.toString());
 
         // Step 2. Calculate how much DAI is needed for insurance
         let insuranceCost = await saveDaiInstance.getCostOfInsurance.call(amount, { from: userWallet1 });
-
         // console.log('insuranceCost', insuranceCost.toString());
 
         // Step 3. Add costs together, add extra, and approve
@@ -141,10 +117,14 @@ contract('SaveToken', async (accounts) => {
         await daiInstance.approve(saveDaiAddress, amountToApprove, { from: userWallet1 });
 
         // Step 4. mint saveDAI
-        await saveDaiInstance.mint(amount, { from: userWallet1 });
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
+
+        // Step 5. get address of COMP proxy
+        const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
+        const proxyAddress = event.args[0];
 
         const ocDAIbalance = await ocDaiInstance.balanceOf(saveDaiAddress);
-        const cDAIbalance = await cDaiInstance.balanceOf(saveDaiAddress);
+        const cDAIbalance = await cDaiInstance.balanceOf(proxyAddress);
         const saveDaiMinted = await saveDaiInstance.balanceOf(userWallet1);
 
         // all token balances should match
@@ -155,6 +135,31 @@ contract('SaveToken', async (accounts) => {
     });
 
     context('multiple SaveTokens deployed', function () {
+      beforeEach(async () => {
+        // deploy another saveToken
+        saveToken2 = await saveTokenFactory.createSaveToken(
+          usdcAddress,
+          compoundAdapter.address,
+          cUSDCAddress,
+          opynAdapter.address,
+          ocUSDCAddress,
+          uniswapFactoryAddress,
+          compFarmer.address,
+          'SaveUSDC',
+          'SUT',
+          8,
+        );
+        saveUsdcAddress = saveToken2.logs[0].args.addr;
+        saveUsdcInstance = await SaveToken.at(saveUsdcAddress);
+
+        // Send eth to userAddress to have gas to send an ERC20 tx.
+        await web3.eth.sendTransaction({
+          from: owner,
+          to: userWallet2,
+          value: ether('1'),
+        });
+        await daiInstance.approve(saveUsdcAddress, ether('10'), { from: userWallet2 });
+      });
       it('should deploy a new SaveToken with new info', async () => {
         const name = await saveUsdcInstance.name.call();
         const symbol = await saveUsdcInstance.symbol.call();

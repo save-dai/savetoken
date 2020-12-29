@@ -18,7 +18,7 @@ contract SaveTokenFactory {
      * @param assetToken The addresses for the asset token
      * @param insuranceAdapter The address of the Insurance adapter a token will use
      * @param insuranceToken The addresses for the insurance token
-     * @param rewardsToken The addresses for the rewards token
+     * @param uniswapFactory The addresses for the Uniswap factory token
      * @param farmerAddress The addresses for the SaveToken farmer
      */
     function createSaveToken(
@@ -28,8 +28,7 @@ contract SaveTokenFactory {
         address insuranceAdapter,
         address insuranceToken,
         address uniswapFactory,
-        // address rewardsToken,
-        // address farmerAddress,
+        address farmerAddress,
         string memory name,
         string memory symbol,
         uint8 decimals
@@ -41,8 +40,7 @@ contract SaveTokenFactory {
             insuranceAdapter,
             insuranceToken,
             uniswapFactory,
-            // rewardsToken,
-            // farmerAddress,
+            farmerAddress,
             name,
             symbol,
             decimals

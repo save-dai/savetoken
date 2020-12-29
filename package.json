@@ -17,13 +17,13 @@
   "license": "ISC",
   "dependencies": {
     "@openzeppelin/contracts": "^3.2.0",
+    "@openzeppelin/contracts-upgradeable": "^3.3.0",
     "@openzeppelin/test-helpers": "^0.5.9",
     "@truffle/hdwallet-provider": "^1.2.0",
     "babel-eslint": "^10.1.0",
     "eslint": "^7.12.1",
     "eslint-plugin-babel": "^5.3.1",
-    "eslint-plugin-mocha": "^8.0.0",
-    "rewards-farmer": "^1.0.5"
+    "eslint-plugin-mocha": "^8.0.0"
   },
   "devDependencies": {},
   "description": ""
