@@ -9,33 +9,29 @@ const {
 
 const SaveTokenFactory = artifacts.require('SaveTokenFactory');
 const SaveToken = artifacts.require('SaveToken');
-const SaveTokenFarmer = artifacts.require('SaveTokenFarmer');
+const COMPFarmer = artifacts.require('COMPFarmer');
 const CompoundAdapter = artifacts.require('CompoundAdapter');
 const OpynAdapter = artifacts.require('OpynAdapter');
 
 // mainnet addresses
+const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
-const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
+const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
 contract('SaveTokenFactory', async (accounts) => {
-  const aaveAdapter = accounts[1];
-  const aDaiAddress = accounts[2];
-  const ocDaiAddress = accounts[3];
-  const receiver1 = accounts[4];
-  const receiver2 = accounts[5];
 
   before(async () => {
     // deploys the farmer's logic contract
-    saveTokenFarmer = await SaveTokenFarmer.new();
-    saveTokenFarmerAddress = saveTokenFarmer.address;
+    compFarmer = await COMPFarmer.new();
     saveTokenFactory = await SaveTokenFactory.new();
-    compoundAdapter = await CompoundAdapter.new(cDaiAddress);
+    compoundAdapter = await CompoundAdapter.new(compAddress);
     opynAdapter = await OpynAdapter.new();
   });
 
   describe('createSaveToken', function () {
+
     it('should deploy saveToken and add address to the saveTokens array', async () => {
       saveToken = await saveTokenFactory.createSaveToken(
         daiAddress,
@@ -44,6 +40,7 @@ contract('SaveTokenFactory', async (accounts) => {
         opynAdapter.address,
         ocDaiAddress,
         uniswapFactoryAddress,
+        compFarmer.address,
         'SaveDAI',
         'SDT',
         8,
@@ -62,6 +59,7 @@ contract('SaveTokenFactory', async (accounts) => {
         opynAdapter.address,
         ocDaiAddress,
         uniswapFactoryAddress,
+        compFarmer.address,
         'SaveDAI',
         'SDT',
         8,
@@ -76,6 +74,7 @@ contract('SaveTokenFactory', async (accounts) => {
         opynAdapter.address,
         ocDaiAddress,
         uniswapFactoryAddress,
+        compFarmer.address,
         'SaveDAI',
         'SDT',
         8,

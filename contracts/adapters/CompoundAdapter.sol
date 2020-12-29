@@ -11,7 +11,7 @@ import "../interfaces/IAsset.sol";
 import "../interfaces/ICToken.sol";
 
 contract CompoundAdapter is IAsset, FarmerFactory {
-	using SafeMath for uint256;
+    using SafeMath for uint256;
 
     address internal compToken;
 
@@ -21,11 +21,11 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         compToken = comp;
     }
 
-    function hold(uint256 amount) 
-    	external 
-    	override(IAsset)
-    	returns (uint256) 
-    {
+    function hold(uint256 amount)
+        external
+        override(IAsset)
+        returns (uint256)
+        {
         ICToken cToken = ICToken(StorageLib.assetToken());
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
         
@@ -47,20 +47,21 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         require(underlyingToken.transfer(proxy, amount));
 
         // mint the interest bearing token
-        uint256 assetAmount = COMPFarmer(proxy).mint();
+        uint256 _amount = COMPFarmer(proxy).mint();
+        return _amount;
     }
 
      // calculate underlying needed to mint _amount of cToken and mint tokens
-    function getCostOfAsset(uint256 amount) 
-    	external
-    	override(IAsset)
-    	returns (uint256) 
-    {
-    	ICToken cToken = ICToken(StorageLib.assetToken());
-        // calculate DAI needed to mint _amount of cToken
+    function getCostOfAsset(uint256 amount)
+        external
+        override(IAsset)
+        returns (uint256)
+        {
+        ICToken cToken = ICToken(StorageLib.assetToken());
+        // calculate amount of underlying asset needed to mint amount of cToken
         uint256 exchangeRate = cToken.exchangeRateCurrent();
-      	emit ExchangeRate(exchangeRate);
-       	return amount.mul(exchangeRate).add(10**18 - 1).div(10**18);
+        emit ExchangeRate(exchangeRate);
+        return amount.mul(exchangeRate).add(10**18 - 1).div(10**18);
     }
 
     function balanceOf(address account) 

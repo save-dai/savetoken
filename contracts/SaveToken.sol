@@ -81,7 +81,7 @@ contract SaveToken is ERC20 {
     function mint(uint256 amount) 
         external 
         returns (uint256) 
-    {
+        {
         bytes memory signature_cost = abi.encodeWithSignature(
             "getCostOfAsset(uint256)",
             amount
@@ -105,8 +105,8 @@ contract SaveToken is ERC20 {
         );
 
         bytes memory signature_hold = abi.encodeWithSignature(
-            "hold(uint256, address)",
-            assetCost, msg.sender
+            "hold(uint256)",
+            assetCost
         );
 
         bytes memory signature_buy = abi.encodeWithSignature(
@@ -127,33 +127,6 @@ contract SaveToken is ERC20 {
         return assetTokens;
     }
 
-    // for testing
-    function buyInsurance(uint256 amount)
-        external
-        returns (uint256)  
-        {
-            bytes memory signature_buy = abi.encodeWithSignature(
-                "buyInsurance(uint256)",
-                amount
-            );
-
-        uint256 insuranceTokens = _delegatecall(insuranceAdapter, signature_buy);
-        return insuranceTokens;
-    }
-
-    // for testing
-    function getCostOfAsset(uint256 amount)
-        external
-        returns (uint256)  
-        {
-            bytes memory signature_cost = abi.encodeWithSignature(
-                "getCostOfAsset(uint256)",
-                amount
-            );
-
-            uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
-            return assetCost;
-    }   
     // for testing
     function getCostOfInsurance(uint256 amount)
         external

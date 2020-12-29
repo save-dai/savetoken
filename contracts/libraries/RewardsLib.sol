@@ -17,24 +17,19 @@ library RewardsLib {
         internal
         pure
         returns (RewardsStorage storage rs)
-    {
+        {
         bytes32 position = SAVETOKEN_REWARDS;
         assembly {
             rs_slot := position
         }
     }
     
-    function setLogicAddress(
-        address _logicContract
-    ) internal {
+    function setLogicAddress(address _logicContract) internal {
         RewardsStorage storage rs = rewardsStorage();
         rs.logicContract = _logicContract;
     }
 
-    function setFarmerProxy(
-        address _user,
-        address _farmerProxy
-    ) internal {
+    function setFarmerProxy(address _user, address _farmerProxy) internal {
         RewardsStorage storage rs = rewardsStorage();
         rs.farmerProxy[_user] = _farmerProxy;
     }
@@ -46,8 +41,9 @@ library RewardsLib {
     function farmerProxyAddress(address _user)
         internal
         view
-        returns (address farmerProxy_) {
-        farmerProxy_ = rewardsStorage().farmerProxy[_user];
+        returns (address farmerProxy_)
+        {
+        return rewardsStorage().farmerProxy[_user];
     }
 
 }
