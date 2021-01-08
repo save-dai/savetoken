@@ -51,6 +51,27 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         return _amount;
     }
 
+    function withdraw(uint256 amount) 
+        external  
+        override(IAsset)
+        returns (uint256) 
+    {
+        // get rewards farmer proxy
+        address proxy = RewardsLib.farmerProxyAddress(msg.sender);
+
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+
+        // identify SaveToken's underlying balance
+        uint256 initialUnderlyingBalance = underlyingToken.balanceOf(address(this));
+
+        COMPFarmer(proxy).redeem(amount, msg.sender);
+
+        // identify SaveToken's updated underlying balance
+        uint256 updatedUnderlyingBalance = underlyingToken.balanceOf(address(this));
+
+        return updatedUnderlyingBalance.sub(initialUnderlyingBalance);
+    }
+
      // calculate underlying needed to mint _amount of cToken and mint tokens
     function getCostOfAsset(uint256 amount)
         external
