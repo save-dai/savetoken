@@ -28,7 +28,8 @@ contract SaveToken is ERC20 {
     /***************
     EVENTS
     ***************/
-    event Mint(uint256 _amount, address _recipient) ;
+    event Mint(uint256 _amount, address _recipient);
+    event WithdrawForUnderlyingAsset(address user, uint256 amount);
 
     constructor(
         address _underlyingTokenAddress,
@@ -142,28 +143,33 @@ contract SaveToken is ERC20 {
             return insuranceCost;
     }
 
-    // /// @notice This function will unbundle your SaveTokens for your underlying asset
-    // /// @param amount The number of SaveTokens to unbundle
-    // function withdrawForUnderlyingAsset(uint256 amount)
-    //     external
-    //     override(ISaveToken)
-    //     {
-    //     require(farmerProxy[msg.sender] != address(0), 
-    //         "The user farmer proxy must exist");
+    /// @notice This function will unbundle your SaveTokens for your underlying asset
+    /// @param amount The number of SaveTokens to unbundle
+    function withdrawForUnderlyingAsset(uint256 amount)
+        external
+    {
+        require(RewardsLib.farmerProxyAddress(msg.sender) != address(0),
+            "The user farmer proxy must exist");
 
-    //     bytes memory sigAsset = abi.encodeWithSignature(
-    //         "withdraw(uint256)",
-    //         amount
-    //     );
+        bytes memory signature_withdraw = abi.encodeWithSignature(
+           "withdraw(uint256)",
+           amount
+        );
 
-    //     bytes memory sigInsurance = abi.encodeWithSignature(
-    //         "sellInsurance(uint256)",
-    //         amount
-    //     );
+        bytes memory signature_sellInsurance = abi.encodeWithSignature(
+            "sellInsurance(uint256)",
+            amount
+        );
 
-    //     _delegatecall(assetAdapter, sigAsset);
-    //     _delegatecall(insuranceAdapter, sigInsurance);
-    // }
+        uint256 underlyingForAsset = _delegatecall(assetAdapter, signature_withdraw);
+        uint256 underlyingForInsurance = _delegatecall(insuranceAdapter, signature_sellInsurance);
+
+        //transfer underlying to msg.sender
+        require(underlyingToken.transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
+
+        emit WithdrawForUnderlyingAsset(msg.sender, amount);
+        _burn(msg.sender, amount);
+    }
 
     /***************
     INTERNAL FUNCTIONS
