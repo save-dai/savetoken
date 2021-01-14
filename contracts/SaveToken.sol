@@ -133,24 +133,21 @@ contract SaveToken is ERC20 {
         external
         returns (uint256)  
         {
-            bytes memory signature_insurance = abi.encodeWithSignature(
-                "getCostOfInsurance(uint256)",
-                amount
-            );
+        bytes memory signature_insurance = abi.encodeWithSignature(
+            "getCostOfInsurance(uint256)",
+            amount
+        );
 
-            uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
-            
-            return insuranceCost;
+        uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
+        
+        return insuranceCost;
     }
 
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
     function withdrawForUnderlyingAsset(uint256 amount)
         external
-    {
-        require(RewardsLib.farmerProxyAddress(msg.sender) != address(0),
-            "The user farmer proxy must exist");
-
+        {
         bytes memory signature_withdraw = abi.encodeWithSignature(
            "withdraw(uint256)",
            amount
@@ -164,10 +161,14 @@ contract SaveToken is ERC20 {
         uint256 underlyingForAsset = _delegatecall(assetAdapter, signature_withdraw);
         uint256 underlyingForInsurance = _delegatecall(insuranceAdapter, signature_sellInsurance);
 
+        require(amount <= underlyingForAsset.add(underlyingForInsurance),
+            "User must have enough SaveTokens to unbundle");
+
         //transfer underlying to msg.sender
         require(underlyingToken.transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
 
         emit WithdrawForUnderlyingAsset(msg.sender, amount);
+
         _burn(msg.sender, amount);
     }
 
@@ -177,7 +178,7 @@ contract SaveToken is ERC20 {
     function _delegatecall(address adapterAddress, bytes memory sig)
         internal
         returns (uint256)
-    {
+        {
         uint256 ret;
         bool success;
         assembly {
