@@ -14,7 +14,7 @@ contract OpynAdapter is IInsurance {
         external 
         override(IInsurance)
         returns (uint256) 
-    {   
+        {   
 
         address ocToken = StorageLib.insuranceToken();
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
@@ -37,9 +37,9 @@ contract OpynAdapter is IInsurance {
         external 
         override(IInsurance)
         returns (uint256) 
-    {   
+        {   
 
-        address dai = StorageLib.underlyingToken();
+        address underlyingToken = StorageLib.underlyingToken();
         IERC20 ocToken = IERC20(StorageLib.insuranceToken());
         IUniswapExchange ocDaiExchange = _getExchange(StorageLib.insuranceToken());
 
@@ -51,7 +51,7 @@ contract OpynAdapter is IInsurance {
             1, // min_tokens_bought
             1, // min eth bought
             1099511627776, // deadline
-            address(dai) // token address
+            address(underlyingToken) // token address
         );
     }
 
@@ -63,7 +63,7 @@ contract OpynAdapter is IInsurance {
         view
         override(IInsurance)
         returns (uint256)
-    {
+        {
         address underlyingAddress = StorageLib.underlyingToken();
         address oToken = StorageLib.insuranceToken();
 
@@ -88,7 +88,7 @@ contract OpynAdapter is IInsurance {
         view 
         returns 
         (IUniswapExchange) 
-    {
+        {
         address uniswapFactoryAddress = StorageLib.uniswapFactory();
         IUniswapFactory uniswapFactory = IUniswapFactory(uniswapFactoryAddress);
 

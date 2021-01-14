@@ -55,7 +55,7 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         external  
         override(IAsset)
         returns (uint256) 
-    {
+        {
         // get rewards farmer proxy
         address proxy = RewardsLib.farmerProxyAddress(msg.sender);
 
@@ -89,7 +89,7 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         external  
         override(IAsset)
         returns (uint256) 
-    {
+        {
         ICToken cToken = ICToken(StorageLib.assetToken());
         return cToken.balanceOf(account);
     }

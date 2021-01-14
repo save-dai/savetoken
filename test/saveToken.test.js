@@ -182,9 +182,9 @@ contract('SaveToken', async (accounts) => {
   });
 
   describe('withdrawForUnderlyingAsset', function () {
-    it('revert if ths user does not have a farmer address', async () => {
+    it('revert if the user does not have enough SaveTokens to unbundle', async () => {
       await expectRevert(saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
-        'The user farmer proxy must exist');
+        'User must have enough SaveTokens to unbundle');
     });
     it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
       const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
