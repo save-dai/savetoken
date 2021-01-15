@@ -28,7 +28,7 @@ contract SaveToken is ERC20 {
     /***************
     EVENTS
     ***************/
-    event Mint(uint256 _amount, address _recipient);
+    event Mint(uint256 minted, address user);
     event WithdrawForUnderlyingAsset(address user, uint256 amount);
 
     constructor(
@@ -125,7 +125,7 @@ contract SaveToken is ERC20 {
         
         emit Mint(amount, msg.sender);
 
-        return assetTokens;
+        return amount;
     }
 
     /// @notice The saveToken transfer function. If the saveToken has a rewards
@@ -165,7 +165,8 @@ contract SaveToken is ERC20 {
         address sender,
         address recipient,
         uint256 amount
-        ) public override returns (bool) {
+        ) public override returns (bool)
+        {
 
         if (RewardsLib.logicAddress() != address(0)) {
             bytes memory signature_transfer = abi.encodeWithSignature(
@@ -203,8 +204,8 @@ contract SaveToken is ERC20 {
         external
         {
         bytes memory signature_withdraw = abi.encodeWithSignature(
-           "withdraw(uint256)",
-           amount
+            "withdraw(uint256)",
+            amount
         );
 
         bytes memory signature_sellInsurance = abi.encodeWithSignature(
