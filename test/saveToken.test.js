@@ -1,7 +1,6 @@
 /* eslint-disable prefer-const */
 /* global contract artifacts web3 before it assert */
 const { expect } = require('chai');
-const helpers = require('./helpers.js');
 
 const {
   BN,
@@ -43,7 +42,7 @@ contract('SaveToken', async (accounts) => {
   const recipient = accounts[2];
   const relayer = accounts[3];
 
-  const amount = '4892167171';
+  const amount = '48921671711';
 
   beforeEach(async () => {
     // deploys the farmer's logic contract
@@ -76,6 +75,7 @@ contract('SaveToken', async (accounts) => {
     compInstance = await ERC20.at(compAddress);
     ocDaiInstance = await IOToken.at(ocDaiAddress);
     cDaiInstance = await ICToken.at(cDaiAddress);
+
     uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
     ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
     ocDaiExchange = await IUniswapExchange.at(ocDaiExchangeAddress);
@@ -89,7 +89,8 @@ contract('SaveToken', async (accounts) => {
       value: ether('1'),
     });
 
-    await daiInstance.approve(saveDaiAddress, ether('10'), { from: userWallet1 });
+    // approve 1000 DAI
+    await daiInstance.approve(saveDaiAddress, ether('1000'), { from: userWallet1 });
   });
   it('user wallet should have DAI balance', async () => {
     const userWalletBalance = await daiInstance.balanceOf(userWallet1);
@@ -107,28 +108,8 @@ contract('SaveToken', async (accounts) => {
   context('one saveToken deployed: saveDAI', function () {
     describe('mint', function () {
       it('should mint SaveTokens', async () => {
-        // Step 1. Calculate how much DAI is needed for asset
-        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
-        exchangeRate = (exchangeRate.toString()) / 1e18;
-        let assetCost = amount * exchangeRate;
-        assetCost = new BN(assetCost.toString());
-        // console.log('assetCost', assetCost.toString());
-
-        // Step 2. Calculate how much DAI is needed for insurance
-        const insuranceCost = await saveDaiInstance.getCostOfInsurance.call(amount, { from: userWallet1 });
-        // console.log('insuranceCost', insuranceCost.toString());
-
-        // Step 3. Add costs together, add extra, and approve
-        const totalDaiCost = assetCost.add(insuranceCost);
-        amountToApprove = totalDaiCost.add(new BN(ether('0.1')));
-        // console.log('amountToApprove', amountToApprove.toString());
-
-        await daiInstance.approve(saveDaiAddress, amountToApprove, { from: userWallet1 });
-
-        // Step 4. mint saveDAI
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
 
-        // Step 5. get address of COMP proxy
         const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
         const proxyAddress = event.args[0];
 
@@ -141,12 +122,41 @@ contract('SaveToken', async (accounts) => {
         assert.equal(ocDAIbalance.toString(), amount);
         assert.equal(saveDaiMinted.toString(), amount);
       });
-    });
+      it('should decrease userWallet DAI balance', async () => {
+        // Step 1. Get initial balance
+        const initialBalance = await daiInstance.balanceOf(userWallet1);
 
+        // Step 2. Calculate how much DAI is needed for asset
+        let exchangeRate = await cDaiInstance.exchangeRateStored.call();
+        exchangeRate = (exchangeRate.toString()) / 1e18;
+        let assetCost = amount * exchangeRate;
+        assetCost = new BN(assetCost.toString());
+
+        // Step 3. Calculate how much DAI is needed for insurance
+        const insuranceCost = await saveDaiInstance.getCostOfInsurance.call(amount, { from: userWallet1 });
+
+        // Step 4. Add together for total DAI cost
+        const totalDaiCost = assetCost.add(insuranceCost);
+
+        // Step 5. mint saveDAI
+        await saveDaiInstance.mint(amount, { from: userWallet1 });
+
+        // Step 6. Get ending balance
+        const endingBalance = await daiInstance.balanceOf(userWallet1);
+
+        const diff = initialBalance.sub(endingBalance);
+        assert.equal(totalDaiCost.toString().substring(0, 6), diff.toString().substring(0, 6));
+      });
+      it('should emit the amount of tokens minted', async () => {
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        const event = expectEvent(receipt, 'Mint', { minted: amount, user: wallet });
+      });
+    });
     describe('transfer', function () {
       beforeEach(async () => {
         // Mint saveToken
-        const receipt = await helpers.mint(amount, userWallet1);
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
         const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
         senderProxyAddress = event.args[0];
       });
@@ -211,8 +221,7 @@ contract('SaveToken', async (accounts) => {
     describe('transferFrom', async function () {
       beforeEach(async () => {
         // Mint saveToken
-        amount = '489216717111';
-        const receipt = await helpers.mint(amount, userWallet1);
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
         const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
         senderProxyAddress = event.args[0];
       });
@@ -299,90 +308,90 @@ contract('SaveToken', async (accounts) => {
       });
       it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
-  
+
         // identify userWallet1's rewards farmer proxy
         const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
         const proxyAddress = event.args[0];
-  
+
         // identify initial balances
         const cDaiBalanceInitial = await cDaiInstance.balanceOf(proxyAddress);
         const ocDaiBalanceInitial = await ocDaiInstance.balanceOf(saveDaiAddress);
-  
+
         // all token balances should match
         assert.equal(cDaiBalanceInitial.toString(), amount);
         assert.equal(ocDaiBalanceInitial.toString(), amount);
-  
+
         // unbundle userWallet1's SaveTokens
         await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
-  
+
         // identify final balances
         const cDAIbalanceFinal = await cDaiInstance.balanceOf(proxyAddress);
         const ocDAIbalanceFinal = await ocDaiInstance.balanceOf(saveDaiAddress);
-  
+
         diffIncDai = cDaiBalanceInitial.sub(cDAIbalanceFinal);
         diffInocDai = ocDaiBalanceInitial.sub(ocDAIbalanceFinal);
-  
+
         assert.equal(diffIncDai.toString(), amount);
         assert.equal(diffInocDai.toString(), amount);
       });
       it('should send msg.sender the underlying asset', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
-  
+
         tokenAmount = await saveDaiInstance.balanceOf(userWallet1);
         tokenAmount = tokenAmount.toNumber();
-  
+
         // idenitfy the user's initialUnderlyingBalance
         initialUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
-  
+
         // calculate how much DAI is needed for asset
         let exchangeRate = await cDaiInstance.exchangeRateStored.call();
         exchangeRate = exchangeRate / 1e18;
         daiReedem = (tokenAmount * exchangeRate) / 1e18;
-  
+
         // calculate ocDAI for DAI on uniswap
         const eth = await ocDaiExchange.getTokenToEthInputPrice(tokenAmount);
         let daiSwapped = await daiExchange.getEthToTokenInputPrice(eth);
         daiSwapped = daiSwapped / 1e18;
-  
+
         // add daiReedem + daiSwapped together, should be really close to diff
         const daiBoughtTotal = daiReedem + daiSwapped;
-  
+
         // unbundle userWallet1's tokens
         await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
-  
+
         // idenitfy the user's updatedUnderlyingBalance
         const updatedUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
         const diff = (updatedUnderlyingBalance.sub(initialUnderlyingBalance)) / 1e18;
-  
+
         assert.approximately(daiBoughtTotal, diff, 0.0000009);
       });
       it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
-  
+
         // unbundle userWallet1's tokens
         const receipt = await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
-  
+
         // identify userWallet1's rewards farmer proxy
         const event = await expectEvent.inTransaction(receipt.tx, SaveToken, 'WithdrawForUnderlyingAsset');
-  
+
         assert.equal(event.event, 'WithdrawForUnderlyingAsset');
         // assert msg.sender's address emits in the event
         assert.equal(event.args[0].toLowerCase(), userWallet1);
-  
+
         // assert the correct amount was withdrawn
         assert.equal(event.args[1], amount);
       });
       it('should burn the amount of msg.sender\'s SaveTokens', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
-  
+
         const initialBalance = await saveDaiInstance.balanceOf(userWallet1);
-  
+
         // unbundle userWallet's SaveTokens
         await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
-  
+
         // Idenitfy the user's finanl balance
         const finalBalance = await saveDaiInstance.balanceOf(userWallet1);
-  
+
         // Calculate the difference in saveDAI tokens
         const diff = initialBalance - finalBalance;
         assert.equal(diff, amount);
