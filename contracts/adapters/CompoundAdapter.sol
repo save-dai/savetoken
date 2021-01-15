@@ -72,6 +72,58 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         return updatedUnderlyingBalance.sub(initialUnderlyingBalance);
     }
 
+    function transfer(address recipient, uint256 amount)
+        external
+        override(IAsset)
+        returns (uint256)
+        {
+        ICToken cToken = ICToken(StorageLib.assetToken());
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+
+        address senderProxy = RewardsLib.farmerProxyAddress(msg.sender);
+        address recipientProxy = RewardsLib.farmerProxyAddress(recipient);
+
+        // if recipient does not have a proxy, deploy a proxy
+        if (recipientProxy == address(0)) {
+            recipientProxy = deployProxy(
+                address(cToken),
+                address(underlyingToken),
+                compToken
+            );
+            // set mapping of recipient address to proxy
+            RewardsLib.setFarmerProxy(recipient, recipientProxy);
+        }
+
+        // transfer interest bearing token to recipient
+        COMPFarmer(senderProxy).transfer(recipientProxy, amount);
+    }
+
+    function transferFrom(address sender, address recipient, uint256 amount)
+        external
+        override(IAsset)
+        returns (uint256)
+        {
+        ICToken cToken = ICToken(StorageLib.assetToken());
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+        
+        address senderProxy = RewardsLib.farmerProxyAddress(sender);
+        address recipientProxy = RewardsLib.farmerProxyAddress(recipient);
+
+        // if recipient does not have a proxy, deploy a proxy
+        if (recipientProxy == address(0)) {
+            recipientProxy = deployProxy(
+                address(cToken),
+                address(underlyingToken),
+                compToken
+            );
+            // set mapping of recipient address to proxy
+            RewardsLib.setFarmerProxy(recipient, recipientProxy);
+        }
+
+        // transfer interest bearing token to recipient
+        COMPFarmer(senderProxy).transfer(recipientProxy, amount);
+    }
+
      // calculate underlying needed to mint _amount of cToken and mint tokens
     function getCostOfAsset(uint256 amount)
         external

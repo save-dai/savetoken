@@ -128,6 +128,62 @@ contract SaveToken is ERC20 {
         return assetTokens;
     }
 
+    /// @notice The saveToken transfer function.
+    /// @param recipient The address receiving your token.
+    /// @param amount The number of tokens to transfer.
+    /// @return Returns true if successfully executed.
+    function transfer(address recipient, uint256 amount)
+        public
+        override
+        returns (bool)
+        {
+        
+        // if saveToken has a Rewards Farmer, use transfer function in asset adapter
+        if (RewardsLib.logicAddress() != address(0)) {
+            bytes memory signature_transfer = abi.encodeWithSignature(
+                "transfer(address,uint256)",
+                recipient, amount
+            );
+
+            // get cost of tokens to know how much to transfer from user's wallet
+            _delegatecall(assetAdapter, signature_transfer);
+        }
+
+        // transfer saveTokens tokens
+        super.transfer(recipient, amount);
+
+        return true;
+    }
+
+    /// @dev saveDAI's transferFrom function.
+    /// @param sender The address tokens transferred from.
+    /// @param recipient The address receiving tokens.
+    /// @param amount The number of tokens to transfer.
+    /// @return Returns true if successfully executed.
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+        ) public override returns (bool) {
+
+        // if saveToken has a Rewards Farmer, use transferFrom function in asset adapter
+        if (RewardsLib.logicAddress() != address(0)) {
+            bytes memory signature_transfer = abi.encodeWithSignature(
+                "transferFrom(address,address,uint256)",
+                sender, recipient, amount
+            );
+
+            // get cost of tokens to know how much to transfer from user's wallet
+            _delegatecall(assetAdapter, signature_transfer);
+        }
+
+        // transfer saveDAI tokens
+        super.transferFrom(sender, recipient, amount);
+
+        return true;
+    }
+
+
     // for testing
     function getCostOfInsurance(uint256 amount)
         external
