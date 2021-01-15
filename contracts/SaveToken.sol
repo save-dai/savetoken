@@ -128,7 +128,9 @@ contract SaveToken is ERC20 {
         return assetTokens;
     }
 
-    /// @notice The saveToken transfer function.
+    /// @notice The saveToken transfer function. If the saveToken has a rewards
+    /// farmer, call the transfer function in the Asset Adapter. This will take care
+    /// transferring the asset in the rewards rarmer.
     /// @param recipient The address receiving your token.
     /// @param amount The number of tokens to transfer.
     /// @return Returns true if successfully executed.
@@ -138,24 +140,23 @@ contract SaveToken is ERC20 {
         returns (bool)
         {
         
-        // if saveToken has a Rewards Farmer, use transfer function in asset adapter
         if (RewardsLib.logicAddress() != address(0)) {
             bytes memory signature_transfer = abi.encodeWithSignature(
                 "transfer(address,uint256)",
                 recipient, amount
             );
-
-            // get cost of tokens to know how much to transfer from user's wallet
             _delegatecall(assetAdapter, signature_transfer);
         }
 
-        // transfer saveTokens tokens
+        // transfer saveTokens
         super.transfer(recipient, amount);
 
         return true;
     }
 
-    /// @dev saveDAI's transferFrom function.
+    /// @dev The saveToken transferFrom function. If the saveToken has a rewards
+    /// farmer, call the transfer function in the Asset Adapter. This will take care
+    /// transferring the asset in the rewards rarmer.
     /// @param sender The address tokens transferred from.
     /// @param recipient The address receiving tokens.
     /// @param amount The number of tokens to transfer.
@@ -166,18 +167,15 @@ contract SaveToken is ERC20 {
         uint256 amount
         ) public override returns (bool) {
 
-        // if saveToken has a Rewards Farmer, use transferFrom function in asset adapter
         if (RewardsLib.logicAddress() != address(0)) {
             bytes memory signature_transfer = abi.encodeWithSignature(
                 "transferFrom(address,address,uint256)",
                 sender, recipient, amount
             );
-
-            // get cost of tokens to know how much to transfer from user's wallet
             _delegatecall(assetAdapter, signature_transfer);
         }
 
-        // transfer saveDAI tokens
+        // transfer saveTokens
         super.transferFrom(sender, recipient, amount);
 
         return true;
