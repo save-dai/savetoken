@@ -21,7 +21,7 @@ contract COMPFarmer is Farmer {
 
     /// @dev Initializer function to launch proxy.
     /// @param assetAdapter The address of the asset adapter.
-    /// @param cDaiAddress The address of the cDAI asset token.
+    /// @param cDaiAddress The address of the cToken asset token.
     /// @param daiAddress The address of the underlying DAI token.
     /// @param compAddress The address of the rewards / governance token.
     function initialize(
@@ -37,9 +37,9 @@ contract COMPFarmer is Farmer {
         comp = IERC20(compAddress);
     }
 
-    /// @dev Mint the cDAI asset token that sits in the contract and accrues interest as
+    /// @dev Mint the cToken asset token that sits in the contract and accrues interest as
     /// well as the corresponding governance / rewards tokens, COMP in this examble.
-    /// @return The amount of cDAI minted.
+    /// @return The amount of cToken minted.
     function mint() public onlyOwner returns (uint256)  {
         // identify the current balance of the contract
         uint256 daiBalance = underlying.balanceOf(address(this));
@@ -57,18 +57,18 @@ contract COMPFarmer is Farmer {
         return updatedBalance.sub(initialBalance);
     }
 
-    /// @dev Transfer the cDAI asset token.
-    /// @param to The address the cDAI should be transferred to.
-    /// @param amount The amount of cDAI to transfer.
+    /// @dev Transfer the cToken asset token.
+    /// @param to The address the cToken should be transferred to.
+    /// @param amount The amount of cToken to transfer.
     /// @return Returns true if succesfully executed.
     function transfer(address to, uint256 amount) public onlyOwner returns (bool) {
         require(cToken.transfer(to, amount), "must transfer");
         return true;
     }
 
-    /// @dev Redeems the cDAI asset token for DAI and withdraws
+    /// @dev Redeems the cToken asset token for DAI and withdraws
     /// the rewards / governance tokens that have accrued.
-    /// @param amount The amount of cDAI to redeem.
+    /// @param amount The amount of cToken to redeem.
     /// @param user The address to send the DAI to.
     function redeem(uint256 amount, address user) public onlyOwner {
         // Redeem returns 0 on success
