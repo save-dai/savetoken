@@ -26,7 +26,6 @@ const IUniswapExchange = artifacts.require('IUniswapExchange');
 const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
-// const userWallet1 = '0xe8b1764ae2e927c61c0bf15fe39fa508e6bb426d';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
@@ -132,7 +131,8 @@ contract('SaveToken', async (accounts) => {
         assetCost = new BN(assetCost.toString());
 
         // Step 3. Calculate how much DAI is needed for insurance
-        const insuranceCost = await saveDaiInstance.getCostOfInsurance.call(amount, { from: userWallet1 });
+        const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice(amount);
+        const insuranceCost = await daiExchange.getTokenToEthOutputPrice(ethToPay);
 
         // Step 4. Add together for total DAI cost
         const totalDaiCost = assetCost.add(insuranceCost);
