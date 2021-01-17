@@ -26,7 +26,7 @@ const IUniswapExchange = artifacts.require('IUniswapExchange');
 const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
-const userWallet1 = '0xe8b1764ae2e927c61c0bf15fe39fa508e6bb426d';
+// const userWallet1 = '0xe8b1764ae2e927c61c0bf15fe39fa508e6bb426d';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
@@ -38,11 +38,34 @@ const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
 
 contract('SaveToken', async (accounts) => {
   const owner = accounts[0];
-  const nonUserWallet = accounts[1];
-  const recipient = accounts[2];
-  const relayer = accounts[3];
+  const userWallet1 = accounts[1];
+  const nonUserWallet = accounts[2];
+  const recipient = accounts[3];
+  const relayer = accounts[4];
 
   const amount = '48921671711';
+
+  before(async () => {
+    // instantiate mock tokens
+    daiInstance = await ERC20.at(daiAddress);
+    usdcInstance = await ERC20.at(usdcAddress);
+    compInstance = await ERC20.at(compAddress);
+    ocDaiInstance = await IOToken.at(ocDaiAddress);
+    cDaiInstance = await ICToken.at(cDaiAddress);
+
+    uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
+    ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
+    ocDaiExchange = await IUniswapExchange.at(ocDaiExchangeAddress);
+    daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
+    daiExchange = await IUniswapExchange.at(daiExchangeAddress);
+
+    // swap ETH for DAI
+    await daiExchange.ethToTokenSwapInput(
+      1,
+      1099511627776,
+      { from: userWallet1, value: ether('20') },
+    );
+  });
 
   beforeEach(async () => {
     // deploys the farmer's logic contract
@@ -69,40 +92,16 @@ contract('SaveToken', async (accounts) => {
     saveDaiAddress = saveToken.logs[0].args.addr;
     saveDaiInstance = await SaveToken.at(saveDaiAddress);
 
-    // instantiate mock tokens
-    daiInstance = await ERC20.at(daiAddress);
-    usdcInstance = await ERC20.at(usdcAddress);
-    compInstance = await ERC20.at(compAddress);
-    ocDaiInstance = await IOToken.at(ocDaiAddress);
-    cDaiInstance = await ICToken.at(cDaiAddress);
-
-    uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
-    ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
-    ocDaiExchange = await IUniswapExchange.at(ocDaiExchangeAddress);
-    daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
-    daiExchange = await IUniswapExchange.at(daiExchangeAddress);
-
-    // Send eth to userAddress to have gas to send an ERC20 tx.
-    await web3.eth.sendTransaction({
-      from: owner,
-      to: userWallet1,
-      value: ether('1'),
-    });
-
     // approve 1000 DAI
     await daiInstance.approve(saveDaiAddress, ether('1000'), { from: userWallet1 });
   });
-  it('user wallet should have DAI balance', async () => {
+  it('user wallet1 should have DAI balance', async () => {
     const userWalletBalance = await daiInstance.balanceOf(userWallet1);
-    expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(ether('0.1')));
+    expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(100));
   });
   it('user wallet2 should have USDC balance', async () => {
     const userWalletBalance = await usdcInstance.balanceOf(userWallet2);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(1000));
-  });
-  it('should send ether to the DAI address', async () => {
-    const ethBalance = await balance.current(userWallet1);
-    expect(new BN(ethBalance)).to.be.bignumber.least(new BN(ether('0.1')));
   });
 
   context('one saveToken deployed: saveDAI', function () {
@@ -150,7 +149,7 @@ contract('SaveToken', async (accounts) => {
       it('should emit the amount of tokens minted', async () => {
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
         const wallet = web3.utils.toChecksumAddress(userWallet1);
-        const event = expectEvent(receipt, 'Mint', { minted: amount, user: wallet });
+        expectEvent(receipt, 'Mint', { amount: amount, user: wallet });
       });
     });
     describe('transfer', function () {
@@ -371,15 +370,8 @@ contract('SaveToken', async (accounts) => {
         // unbundle userWallet1's tokens
         const receipt = await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
-        // identify userWallet1's rewards farmer proxy
-        const event = await expectEvent.inTransaction(receipt.tx, SaveToken, 'WithdrawForUnderlyingAsset');
-
-        assert.equal(event.event, 'WithdrawForUnderlyingAsset');
-        // assert msg.sender's address emits in the event
-        assert.equal(event.args[0].toLowerCase(), userWallet1);
-
-        // assert the correct amount was withdrawn
-        assert.equal(event.args[1], amount);
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        expectEvent(receipt, 'WithdrawForUnderlyingAsset', { amount: amount, user: wallet });
       });
       it('should burn the amount of msg.sender\'s SaveTokens', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
