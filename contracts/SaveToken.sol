@@ -175,22 +175,6 @@ contract SaveToken is ERC20 {
         return true;
     }
 
-
-    // for testing
-    function getCostOfInsurance(uint256 amount)
-        external
-        returns (uint256)  
-        {
-        bytes memory signature_insurance = abi.encodeWithSignature(
-            "getCostOfInsurance(uint256)",
-            amount
-        );
-
-        uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
-        
-        return insuranceCost;
-    }
-
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
     function withdrawForUnderlyingAsset(uint256 amount) external {
