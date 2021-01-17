@@ -28,8 +28,8 @@ contract SaveToken is ERC20 {
     /***************
     EVENTS
     ***************/
-    event Mint(uint256 minted, address user);
-    event WithdrawForUnderlyingAsset(address user, uint256 amount);
+    event Mint(uint256 amount, address user);
+    event WithdrawForUnderlyingAsset(uint256 amount, address user);
 
     constructor(
         address _underlyingTokenAddress,
@@ -79,10 +79,7 @@ contract SaveToken is ERC20 {
     /// @notice This function mints SaveTokens
     /// @param amount The number of SaveTokens to mint
     /// @return Returns the total number of SaveTokens minted
-    function mint(uint256 amount) 
-        external 
-        returns (uint256) 
-        {
+    function mint(uint256 amount) external returns (uint256) {
         bytes memory signature_cost = abi.encodeWithSignature(
             "getCostOfAsset(uint256)",
             amount
@@ -134,11 +131,7 @@ contract SaveToken is ERC20 {
     /// @param recipient The address receiving your token.
     /// @param amount The number of tokens to transfer.
     /// @return Returns true if successfully executed.
-    function transfer(address recipient, uint256 amount)
-        public
-        override
-        returns (bool)
-        {
+    function transfer(address recipient, uint256 amount) public override returns (bool) {
         
         if (RewardsLib.logicAddress() != address(0)) {
             bytes memory signature_transfer = abi.encodeWithSignature(
@@ -200,9 +193,7 @@ contract SaveToken is ERC20 {
 
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
-    function withdrawForUnderlyingAsset(uint256 amount)
-        external
-        {
+    function withdrawForUnderlyingAsset(uint256 amount) external {
         bytes memory signature_withdraw = abi.encodeWithSignature(
             "withdraw(uint256)",
             amount
@@ -222,7 +213,7 @@ contract SaveToken is ERC20 {
         //transfer underlying to msg.sender
         require(underlyingToken.transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
 
-        emit WithdrawForUnderlyingAsset(msg.sender, amount);
+        emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
         _burn(msg.sender, amount);
     }

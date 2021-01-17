@@ -8,6 +8,7 @@ interface IUniswapExchange {
     function getEthToTokenOutputPrice(uint256 tokens_bought) external view returns (uint256 eth_sold);
     function getTokenToEthOutputPrice(uint256 eth_bought) external view returns (uint256 tokens_sold);
     function getTokenToEthInputPrice(uint256 tokens_sold) external view returns (uint256 eth_bought);
+    
     // Trade ERC20 to ERC20
     function tokenToTokenSwapInput(
         uint256 tokens_sold,
@@ -16,4 +17,10 @@ interface IUniswapExchange {
         uint256 deadline,
         address token_addr) 
     external returns (uint256  tokens_bought);
+    
+    function ethToTokenSwapInput(
+        uint256 min_tokens,
+        uint256 deadline)
+    external payable returns (uint256  tokens_bought);
+
 }

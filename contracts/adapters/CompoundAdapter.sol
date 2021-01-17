@@ -75,53 +75,37 @@ contract CompoundAdapter is IAsset, FarmerFactory {
     function transfer(address recipient, uint256 amount)
         external
         override(IAsset)
-        returns (uint256)
+        returns (bool)
         {
-        ICToken cToken = ICToken(StorageLib.assetToken());
-        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
-
         address senderProxy = RewardsLib.farmerProxyAddress(msg.sender);
         address recipientProxy = RewardsLib.farmerProxyAddress(recipient);
 
         // if recipient does not have a proxy, deploy a proxy
         if (recipientProxy == address(0)) {
-            recipientProxy = deployProxy(
-                address(cToken),
-                address(underlyingToken),
-                compToken
-            );
-            // set mapping of recipient address to proxy
-            RewardsLib.setFarmerProxy(recipient, recipientProxy);
+            recipientProxy = _deployProxy(recipient);
         }
 
         // transfer interest bearing token to recipient
         COMPFarmer(senderProxy).transfer(recipientProxy, amount);
+        return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount)
         external
         override(IAsset)
-        returns (uint256)
+        returns (bool)
         {
-        ICToken cToken = ICToken(StorageLib.assetToken());
-        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
-        
         address senderProxy = RewardsLib.farmerProxyAddress(sender);
         address recipientProxy = RewardsLib.farmerProxyAddress(recipient);
 
         // if recipient does not have a proxy, deploy a proxy
         if (recipientProxy == address(0)) {
-            recipientProxy = deployProxy(
-                address(cToken),
-                address(underlyingToken),
-                compToken
-            );
-            // set mapping of recipient address to proxy
-            RewardsLib.setFarmerProxy(recipient, recipientProxy);
+            recipientProxy = _deployProxy(recipient);
         }
 
         // transfer interest bearing token to recipient
         COMPFarmer(senderProxy).transfer(recipientProxy, amount);
+        return true;
     }
 
      // calculate underlying needed to mint _amount of cToken and mint tokens
@@ -144,5 +128,19 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         {
         ICToken cToken = ICToken(StorageLib.assetToken());
         return cToken.balanceOf(account);
+    }
+
+    function _deployProxy(address recipient) internal returns (address) {
+        address cToken = StorageLib.assetToken();
+        address underlyingToken = StorageLib.underlyingToken();
+
+        address recipientProxy = deployProxy(
+            cToken,
+            underlyingToken,
+            compToken
+        );
+        // set mapping of recipient address to proxy
+        RewardsLib.setFarmerProxy(recipient, recipientProxy);
+        return recipientProxy;
     }
 }
