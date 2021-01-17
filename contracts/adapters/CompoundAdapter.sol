@@ -86,8 +86,7 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         }
 
         // transfer interest bearing token to recipient
-        COMPFarmer(senderProxy).transfer(recipientProxy, amount);
-        return true;
+        return COMPFarmer(senderProxy).transfer(recipientProxy, amount);
     }
 
     function transferFrom(address sender, address recipient, uint256 amount)
@@ -104,8 +103,7 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         }
 
         // transfer interest bearing token to recipient
-        COMPFarmer(senderProxy).transfer(recipientProxy, amount);
-        return true;
+        return COMPFarmer(senderProxy).transfer(recipientProxy, amount);
     }
 
      // calculate underlying needed to mint _amount of cToken and mint tokens
