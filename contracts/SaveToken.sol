@@ -33,6 +33,7 @@ contract SaveToken is ERC20, Pausable {
     ***************/
     event Mint(uint256 amount, address user);
     event WithdrawForUnderlyingAsset(uint256 amount, address user);
+    event WithdrawReward(uint256 amount, address user);
 
     constructor(
         address _underlyingTokenAddress,
@@ -70,14 +71,13 @@ contract SaveToken is ERC20, Pausable {
         if (_rewardsLogic != address(0)) {
             RewardsLib.setLogicAddress(_rewardsLogic);
         }
- 
+
         ERC20StorageLib.setERC20Metadata(_name, _symbol, _decimals);
 
         StorageLib.SaveTokenStorage storage st = StorageLib.saveTokenStorage();
 
         // solhint-disable-next-line
         st.supportedInterfaces[type(IERC165).interfaceId] = true;
-
     }
 
     /// @notice This function mints SaveTokens
@@ -216,6 +216,17 @@ contract SaveToken is ERC20, Pausable {
     function unpause() external {
         require(pauser == msg.sender, "Caller must be admin");
         _unpause();
+    }
+
+    /// @notice This function will withdraw all reward tokens
+    /// @return amount Returns the amount of reward tokens withdrawn
+    function withdrawReward() external returns (uint256 amount) {
+        bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
+        
+        uint256 balance = _delegatecall(assetAdapter, signature_withdrawReward);
+
+        emit WithdrawReward(balance, msg.sender);
+        return balance;
     }
 
     /***************
