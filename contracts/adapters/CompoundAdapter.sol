@@ -72,6 +72,17 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         return updatedUnderlyingBalance.sub(initialUnderlyingBalance);
     }
 
+    function withdrawReward() 
+        external  
+        override(IAsset)
+        returns (uint256) 
+        {
+        // get rewards farmer proxy
+        address proxy = RewardsLib.farmerProxyAddress(msg.sender);
+
+        return COMPFarmer(proxy).withdrawReward(msg.sender);
+    }
+
     function transfer(address recipient, uint256 amount)
         external
         override(IAsset)

@@ -94,12 +94,13 @@ contract COMPFarmer is Farmer {
 
     /// @dev Allows user to withdraw the accrued COMP tokens at any time.
     /// @param user The address to send the COMP tokens to.
-    function withdrawReward(address user) public onlyOwner {
+    function withdrawReward(address user) public onlyOwner returns (uint256){
         IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
         comptroller.claimComp(address(this));
 
         uint256 balance = comp.balanceOf(address(this));
         require(comp.transfer(user, balance), "must transfer");
+        return balance;
     }
 
 }
