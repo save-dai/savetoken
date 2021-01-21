@@ -95,6 +95,7 @@ contract SaveToken is ERC20, Pausable {
 
         // get cost of tokens to know how much to transfer from user's wallet
         uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
+
         uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
     
         // transfer total underlying token needed
@@ -195,9 +196,6 @@ contract SaveToken is ERC20, Pausable {
         uint256 underlyingForAsset = _delegatecall(assetAdapter, signature_withdraw);
         uint256 underlyingForInsurance = _delegatecall(insuranceAdapter, signature_sellInsurance);
 
-        require(amount <= underlyingForAsset.add(underlyingForInsurance),
-            "User must have enough SaveTokens to unbundle");
-
         //transfer underlying to msg.sender
         require(underlyingToken.transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
 
@@ -220,9 +218,9 @@ contract SaveToken is ERC20, Pausable {
 
     /// @notice This function will withdraw all reward tokens
     /// @return amount Returns the amount of reward tokens withdrawn
-    function withdrawReward() external returns (uint256 amount) {
+    function withdrawReward() external returns (uint256) {
         bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
-        
+
         uint256 balance = _delegatecall(assetAdapter, signature_withdrawReward);
 
         emit WithdrawReward(balance, msg.sender);
@@ -250,6 +248,7 @@ contract SaveToken is ERC20, Pausable {
             )
             ret := mload(output)
         }
+        require(success, "must successfully execute delegatecall");
         return ret;
     }
     

@@ -40,7 +40,7 @@ contract COMPFarmer is Farmer {
     /// @dev Mint the cToken asset token that sits in the contract and accrues interest as
     /// well as the corresponding governance / rewards tokens, COMP in this examble.
     /// @return The amount of cToken minted.
-    function mint() public onlyOwner returns (uint256)  {
+    function mint() external onlyOwner returns (uint256)  {
         // identify the current balance of the contract
         uint256 daiBalance = underlying.balanceOf(address(this));
 
@@ -61,7 +61,7 @@ contract COMPFarmer is Farmer {
     /// @param to The address the cToken should be transferred to.
     /// @param amount The amount of cToken to transfer.
     /// @return Returns true if succesfully executed.
-    function transfer(address to, uint256 amount) public onlyOwner returns (bool) {
+    function transfer(address to, uint256 amount) external onlyOwner returns (bool) {
         require(cToken.transfer(to, amount), "must transfer");
         return true;
     }
@@ -70,7 +70,7 @@ contract COMPFarmer is Farmer {
     /// the rewards / governance tokens that have accrued.
     /// @param amount The amount of cToken to redeem.
     /// @param user The address to send the DAI to.
-    function redeem(uint256 amount, address user) public onlyOwner {
+    function redeem(uint256 amount, address user) external onlyOwner {
         // Redeem returns 0 on success
         require(cToken.redeem(amount) == 0, "redeem function must execute successfully");
         
@@ -84,7 +84,7 @@ contract COMPFarmer is Farmer {
 
     /// @dev Returns the COMP balance that has accured in the contract.
     /// @return Returns the balance of COMP in the contract.
-    function getTotalCOMPEarned() public onlyOwner returns (uint256) {
+    function getTotalCOMPEarned() external onlyOwner returns (uint256) {
         IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
         comptroller.claimComp(address(this));
 
@@ -94,12 +94,13 @@ contract COMPFarmer is Farmer {
 
     /// @dev Allows user to withdraw the accrued COMP tokens at any time.
     /// @param user The address to send the COMP tokens to.
-    function withdrawReward(address user) public onlyOwner returns (uint256){
+    function withdrawReward(address user) public onlyOwner returns (uint256) {
         IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
         comptroller.claimComp(address(this));
 
         uint256 balance = comp.balanceOf(address(this));
         require(comp.transfer(user, balance), "must transfer");
+
         return balance;
     }
 

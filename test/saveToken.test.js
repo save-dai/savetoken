@@ -21,9 +21,9 @@ const ICToken = artifacts.require('ICToken');
 const IOToken = artifacts.require('IOToken');
 const IUniswapFactory = artifacts.require('IUniswapFactory');
 const IUniswapExchange = artifacts.require('IUniswapExchange');
+const lensABI = require('./abi/lens.json'); // ABI for Compound's CErc20 Contract
 
 // mainnet addresses
-const compAddress = '0xc00e94cb662c3520282e6f5717214004a7f26888';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
@@ -33,6 +33,10 @@ const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const usdcAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const cUSDCAddress = '0x39AA39c021dfbaE8faC545936693aC917d5E7563';
 const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
+
+const compAddress = web3.utils.toChecksumAddress('0xc00e94cb662c3520282e6f5717214004a7f26888');
+const lensAddress = web3.utils.toChecksumAddress('0xd513d22422a3062Bd342Ae374b4b9c20E0a9a074');
+const comptroller = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
 
 contract('SaveToken', async (accounts) => {
   const owner = accounts[0];
@@ -80,11 +84,13 @@ contract('SaveToken', async (accounts) => {
     // deploys the farmer's logic contract
     compFarmer = await COMPFarmer.new();
     saveTokenFactory = await SaveTokenFactory.new(owner);
-    compoundAdapter = await CompoundAdapter.new(compAddress);
+    compoundAdapter = await CompoundAdapter.new();
     opynAdapter = await OpynAdapter.new();
 
     compoundAdapterInstance = await CompoundAdapter.at(compoundAdapter.address);
     opynAdapterInstance = await OpynAdapter.at(opynAdapter.address);
+
+    lensContract = new web3.eth.Contract(lensABI, lensAddress);
 
     saveToken = await saveTokenFactory.createSaveToken(
       daiAddress,
@@ -316,18 +322,17 @@ contract('SaveToken', async (accounts) => {
       });
     });
     describe('withdrawForUnderlyingAsset', function () {
+      beforeEach(async () => {
+        // Mint saveToken
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
+        const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
+        proxyAddress = event.args[0];
+      });
       it('revert if the user does not have enough SaveTokens to unbundle', async () => {
         await expectRevert(saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
-          'User must have enough SaveTokens to unbundle');
+          'must successfully execute delegatecall');
       });
       it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
-        // await saveDaiInstance.pause({ from: owner });
-        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
-
-        // identify userWallet1's rewards farmer proxy
-        const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
-        const proxyAddress = event.args[0];
-
         // identify initial balances
         const cDaiBalanceInitial = await cDaiInstance.balanceOf(proxyAddress);
         const ocDaiBalanceInitial = await ocDaiInstance.balanceOf(saveDaiAddress);
@@ -350,8 +355,6 @@ contract('SaveToken', async (accounts) => {
         assert.equal(diffInocDai.toString(), amount);
       });
       it('should send msg.sender the underlying asset', async () => {
-        await saveDaiInstance.mint(amount, { from: userWallet1 });
-
         tokenAmount = await saveDaiInstance.balanceOf(userWallet1);
         tokenAmount = tokenAmount.toNumber();
 
@@ -380,26 +383,40 @@ contract('SaveToken', async (accounts) => {
 
         assert.approximately(daiBoughtTotal, diff, 0.0000009);
       });
-      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
-        await saveDaiInstance.mint(amount, { from: userWallet1 });
+      it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
+        const userCompBalance = await compInstance.balanceOf(userWallet1);
 
-        // unbundle userWallet1's tokens
-        const receipt = await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+        const metaData1 = await lensContract.methods.getCompBalanceMetadataExt(
+          compAddress, comptroller, userWallet1).call();
+        const metaDataBalance1 = metaData1[0];
 
-        const wallet = web3.utils.toChecksumAddress(userWallet1);
-        expectEvent(receipt, 'WithdrawForUnderlyingAsset', { amount: amount, user: wallet });
-      });
-      it('should burn the amount of msg.sender\'s SaveTokens', async () => {
-        await saveDaiInstance.mint(amount, { from: userWallet1 });
+        assert.equal(metaDataBalance1, userCompBalance);
 
-        const initialBalance = await saveDaiInstance.balanceOf(userWallet1);
+        await time.advanceBlock();
 
-        // unbundle userWallet's SaveTokens
         await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
+        const userCompBalance2 = await compInstance.balanceOf(userWallet1);
+
+        const metaData2 = await lensContract.methods.getCompBalanceMetadataExt(
+          compAddress, comptroller, userWallet1).call();
+        const metaDataBalance2 = metaData2[0];
+
+        assert.equal(metaDataBalance2, userCompBalance2);
+      });
+      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
+        // unbundle userWallet1's tokens
+        const withdrawalReceipt = await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        expectEvent(withdrawalReceipt, 'WithdrawForUnderlyingAsset', { amount: amount, user: wallet });
+      });
+      it('should burn the amount of msg.sender\'s SaveTokens', async () => {
+        const initialBalance = await saveDaiInstance.balanceOf(userWallet1);
+        // unbundle userWallet's SaveTokens
+        await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
         // Idenitfy the user's finanl balance
         const finalBalance = await saveDaiInstance.balanceOf(userWallet1);
-
         // Calculate the difference in saveDAI tokens
         const diff = initialBalance - finalBalance;
         assert.equal(diff, amount);
@@ -414,6 +431,51 @@ contract('SaveToken', async (accounts) => {
         await saveDaiInstance.pause({ from: owner });
         await expectRevert(saveDaiInstance.unpause({ from: userWallet1 }), 'Caller must be admin',
         );
+      });
+    });
+    describe('withdrawReward', function () {
+      beforeEach(async () => {
+        // Mint saveToken
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
+        const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
+        proxyAddress = event.args[0];
+      });
+      it('should revert if the transfer of rewards is unsuccessful', async () => {
+        await expectRevert(saveDaiInstance.withdrawReward({ from: nonUserWallet }),
+          'must successfully execute delegatecall');
+      });
+      it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
+        const userCompBalance = await compInstance.balanceOf(userWallet1);
+
+        const metaData1 = await lensContract.methods.getCompBalanceMetadataExt(
+          compAddress, comptroller, userWallet1).call();
+        const metaDataBalance1 = metaData1[0];
+
+        assert.equal(metaDataBalance1, userCompBalance);
+
+        await time.advanceBlock();
+
+        await saveDaiInstance.withdrawReward({ from: userWallet1 });
+
+        const userCompBalance2 = await compInstance.balanceOf(userWallet1);
+
+        const metaData2 = await lensContract.methods.getCompBalanceMetadataExt(
+          compAddress, comptroller, userWallet1).call();
+        const metaDataBalance2 = metaData2[0];
+
+        assert.equal(metaDataBalance2, userCompBalance2);
+      });
+      it('should emit a WithdrawReward event with the msg.sender\'s address and the amount of rewards tokens withdrawn', async () => {
+        await time.advanceBlock();
+        const initialCOMPBalance = await compInstance.balanceOf(userWallet1);
+
+        const withdrawRewardReceipt = await saveDaiInstance.withdrawReward({ from: userWallet1 });
+
+        const finalCOMPBalance = await compInstance.balanceOf(userWallet1);
+        diff = finalCOMPBalance.sub(initialCOMPBalance);
+
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        expectEvent(withdrawRewardReceipt, 'WithdrawReward', { amount: diff, user: wallet });
       });
     });
   });
