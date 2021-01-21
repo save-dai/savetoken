@@ -13,13 +13,7 @@ import "../interfaces/ICToken.sol";
 contract CompoundAdapter is IAsset, FarmerFactory {
     using SafeMath for uint256;
 
-    address internal compToken;
-
     event ExchangeRate(uint256 exchangeRate);
-
-    constructor(address comp) {
-        compToken = comp;
-    }
 
     function hold(uint256 amount)
         external
@@ -35,7 +29,8 @@ contract CompoundAdapter is IAsset, FarmerFactory {
             proxy = deployProxy(
                 address(cToken),
                 address(underlyingToken),
-                compToken
+                // COMP token address
+                0xc00e94Cb662C3520282E6f5717214004A7f26888
             );
             // set mapping of user address to proxy
             RewardsLib.setFarmerProxy(msg.sender, proxy);
@@ -75,7 +70,7 @@ contract CompoundAdapter is IAsset, FarmerFactory {
     function withdrawReward() 
         external  
         override(IAsset)
-        returns (uint256) 
+        returns (uint256)
         {
         // get rewards farmer proxy
         address proxy = RewardsLib.farmerProxyAddress(msg.sender);
@@ -147,7 +142,8 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         address recipientProxy = deployProxy(
             cToken,
             underlyingToken,
-            compToken
+            // COMP token address
+            0xc00e94Cb662C3520282E6f5717214004A7f26888
         );
         // set mapping of recipient address to proxy
         RewardsLib.setFarmerProxy(recipient, recipientProxy);
