@@ -69,7 +69,7 @@ contract('SaveToken', async (accounts) => {
   beforeEach(async () => {
     // deploys the farmer's logic contract
     compFarmer = await COMPFarmer.new();
-    saveTokenFactory = await SaveTokenFactory.new();
+    saveTokenFactory = await SaveTokenFactory.new(owner);
     compoundAdapter = await CompoundAdapter.new(compAddress);
     opynAdapter = await OpynAdapter.new();
 
@@ -105,6 +105,11 @@ contract('SaveToken', async (accounts) => {
 
   context('one saveToken deployed: saveDAI', function () {
     describe('mint', function () {
+      it('should revert if paused', async () => {
+        await saveDaiInstance.pause({ from: owner });
+        // mint saveDAI tokens
+        await expectRevert(saveDaiInstance.mint(amount, { from: userWallet1 }), 'Pausable: paused');
+      });
       it('should mint SaveTokens', async () => {
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
 
@@ -387,6 +392,17 @@ contract('SaveToken', async (accounts) => {
         // Calculate the difference in saveDAI tokens
         const diff = initialBalance - finalBalance;
         assert.equal(diff, amount);
+      });
+    });
+    describe('pause and unpause', function () {
+      it('should revert if paused by non admin', async () => {
+        await expectRevert(saveDaiInstance.pause({ from: userWallet1 }), 'Caller must be admin',
+        );
+      });
+      it('should revert if unpaused by non admin', async () => {
+        await saveDaiInstance.pause({ from: owner });
+        await expectRevert(saveDaiInstance.unpause({ from: userWallet1 }), 'Caller must be admin',
+        );
       });
     });
   });

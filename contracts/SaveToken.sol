@@ -5,6 +5,8 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./libraries/ERC20StorageLib.sol";
 import "./libraries/RewardsLib.sol";
 import "./libraries/StorageLib.sol";
@@ -14,7 +16,7 @@ import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
 import "./token/ERC20.sol";
 
-contract SaveToken is ERC20 {
+contract SaveToken is ERC20, Pausable, AccessControl {
     using SafeMath for uint256;
 
     address public underlyingTokenAddress;
@@ -24,6 +26,7 @@ contract SaveToken is ERC20 {
     address public insuranceToken;
     address public uniswapFactory;
     IERC20 public underlyingToken;
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     /***************
     EVENTS
@@ -39,6 +42,7 @@ contract SaveToken is ERC20 {
         address _insuranceToken,
         address _uniswapFactory,
         address _rewardsLogic,
+        address _admin,
         string memory _name,
         string memory _symbol,
         uint8 _decimals
@@ -65,6 +69,8 @@ contract SaveToken is ERC20 {
         if (_rewardsLogic != address(0)) {
             RewardsLib.setLogicAddress(_rewardsLogic);
         }
+
+        _setupRole(PAUSER_ROLE, _admin);
  
         ERC20StorageLib.setERC20Metadata(_name, _symbol, _decimals);
 
@@ -78,7 +84,7 @@ contract SaveToken is ERC20 {
     /// @notice This function mints SaveTokens
     /// @param amount The number of SaveTokens to mint
     /// @return Returns the total number of SaveTokens minted
-    function mint(uint256 amount) external returns (uint256) {
+    function mint(uint256 amount) external whenNotPaused returns (uint256) {
         bytes memory signature_cost = abi.encodeWithSignature(
             "getCostOfAsset(uint256)",
             amount
@@ -199,6 +205,18 @@ contract SaveToken is ERC20 {
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
         _burn(msg.sender, amount);
+    }
+
+    /// @notice Allows admin to pause contract
+    function pause() external {
+        require(hasRole(PAUSER_ROLE, msg.sender), "Caller must be admin");
+        _pause();
+    }
+
+    /// @notice Allows admin to unpause contract
+    function unpause() external {
+        require(hasRole(PAUSER_ROLE, msg.sender), "Caller must be admin");
+        _unpause();
     }
 
     /***************
