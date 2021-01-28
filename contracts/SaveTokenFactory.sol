@@ -8,8 +8,13 @@ contract SaveTokenFactory {
 
     // addresses of deployed saveTokens
     address[] public saveTokens;
+    address public admin;
 
     event SaveTokenCreated(address addr);
+
+    constructor(address _admin) public {
+        admin = _admin;
+    }
 
     /*
      * @notice creates a new SaveToken contract
@@ -41,6 +46,7 @@ contract SaveTokenFactory {
             insuranceToken,
             uniswapFactory,
             farmerAddress,
+            admin,
             name,
             symbol,
             decimals
