@@ -21,11 +21,12 @@ const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 
 contract('SaveTokenFactory', async (accounts) => {
+  const owner = accounts[0];
 
   before(async () => {
     // deploys the farmer's logic contract
     compFarmer = await COMPFarmer.new();
-    saveTokenFactory = await SaveTokenFactory.new();
+    saveTokenFactory = await SaveTokenFactory.new(owner);
     compoundAdapter = await CompoundAdapter.new(compAddress);
     opynAdapter = await OpynAdapter.new();
   });
