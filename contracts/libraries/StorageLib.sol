@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 library StorageLib {
@@ -25,7 +25,7 @@ library StorageLib {
     {
         bytes32 position = SAVETOKEN_STORAGE_POSITION;
         assembly {
-            st_slot := position
+            st.slot := position
         }
     }
     

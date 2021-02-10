@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 library RewardsLib {
@@ -20,7 +20,7 @@ library RewardsLib {
         {
         bytes32 position = SAVETOKEN_REWARDS;
         assembly {
-            rs_slot := position
+            rs.slot := position
         }
     }
     

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -47,7 +47,6 @@ contract SaveToken is ERC20, Pausable, AccessControl {
         string memory _symbol,
         uint8 _decimals
         )
-        public
         {
         underlyingTokenAddress = _underlyingTokenAddress;
         assetAdapter = _assetAdapter;

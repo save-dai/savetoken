@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity >=0.6.0 <0.8.0;
 
 import "./SaveToken.sol";
 
@@ -12,7 +12,7 @@ contract SaveTokenFactory {
 
     event SaveTokenCreated(address addr);
 
-    constructor(address _admin) public {
+    constructor(address _admin) {
         admin = _admin;
     }
 
