@@ -98,7 +98,7 @@ contract('SaveToken', async (accounts) => {
     const userWalletBalance = await daiInstance.balanceOf(userWallet1);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(100));
   });
-  it('user wallet2 should have USDC balance', async () => {
+  it.skip('user wallet2 should have USDC balance', async () => {
     const userWalletBalance = await usdcInstance.balanceOf(userWallet2);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(1000));
   });
@@ -305,7 +305,7 @@ contract('SaveToken', async (accounts) => {
         await expectRevert(saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
           'User must have enough SaveTokens to unbundle');
       });
-      it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+      it.skip('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
 
         // identify userWallet1's rewards farmer proxy
@@ -333,7 +333,7 @@ contract('SaveToken', async (accounts) => {
         assert.equal(diffIncDai.toString(), amount);
         assert.equal(diffInocDai.toString(), amount);
       });
-      it('should send msg.sender the underlying asset', async () => {
+      it.skip('should send msg.sender the underlying asset', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
 
         tokenAmount = await saveDaiInstance.balanceOf(userWallet1);
