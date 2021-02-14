@@ -30,7 +30,6 @@ const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 
-const userWallet2 = '0xa1a69453e299aa567214d0f2714084cb3b7e9ce1';
 const usdcAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const cUSDCAddress = '0x39AA39c021dfbaE8faC545936693aC917d5E7563';
 const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
@@ -38,11 +37,13 @@ const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
 contract('SaveToken', async (accounts) => {
   const owner = accounts[0];
   const userWallet1 = accounts[1];
-  const nonUserWallet = accounts[2];
-  const recipient = accounts[3];
-  const relayer = accounts[4];
+  const userWallet2 = accounts[2];
+  const nonUserWallet = accounts[3];
+  const recipient = accounts[4];
+  const relayer = accounts[5];
 
   const amount = '48921671711';
+  const deadline = 1099511627776;
 
   before(async () => {
     // instantiate mock tokens
@@ -57,12 +58,21 @@ contract('SaveToken', async (accounts) => {
     ocDaiExchange = await IUniswapExchange.at(ocDaiExchangeAddress);
     daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
     daiExchange = await IUniswapExchange.at(daiExchangeAddress);
+    usdcExchangeAddress = await uniswapFactory.getExchange(usdcAddress);
+    usdcExchange = await IUniswapExchange.at(usdcExchangeAddress);
 
     // swap ETH for DAI
     await daiExchange.ethToTokenSwapInput(
       1,
-      1099511627776,
+      deadline,
       { from: userWallet1, value: ether('20') },
+    );
+
+    // swap ETH for USDC
+    await usdcExchange.ethToTokenSwapInput(
+      1,
+      deadline,
+      { from: userWallet2, value: ether('20') },
     );
   });
 
@@ -98,7 +108,7 @@ contract('SaveToken', async (accounts) => {
     const userWalletBalance = await daiInstance.balanceOf(userWallet1);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(100));
   });
-  it.skip('user wallet2 should have USDC balance', async () => {
+  it('user wallet2 should have USDC balance', async () => {
     const userWalletBalance = await usdcInstance.balanceOf(userWallet2);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(1000));
   });
@@ -310,7 +320,8 @@ contract('SaveToken', async (accounts) => {
         await expectRevert(saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
           'User must have enough SaveTokens to unbundle');
       });
-      it.skip('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+      it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+        // await saveDaiInstance.pause({ from: owner });
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
 
         // identify userWallet1's rewards farmer proxy
@@ -338,7 +349,7 @@ contract('SaveToken', async (accounts) => {
         assert.equal(diffIncDai.toString(), amount);
         assert.equal(diffInocDai.toString(), amount);
       });
-      it.skip('should send msg.sender the underlying asset', async () => {
+      it('should send msg.sender the underlying asset', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
 
         tokenAmount = await saveDaiInstance.balanceOf(userWallet1);

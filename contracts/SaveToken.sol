@@ -5,8 +5,6 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./libraries/ERC20StorageLib.sol";
 import "./libraries/RewardsLib.sol";
 import "./libraries/StorageLib.sol";
@@ -15,8 +13,9 @@ import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
 import "./token/ERC20.sol";
+import "./utils/Pausable.sol";
 
-contract SaveToken is ERC20, Pausable, AccessControl {
+contract SaveToken is ERC20, Pausable {
     using SafeMath for uint256;
 
     address public underlyingTokenAddress;
@@ -25,8 +24,9 @@ contract SaveToken is ERC20, Pausable, AccessControl {
     address public insuranceAdapter;
     address public insuranceToken;
     address public uniswapFactory;
+    address public pauser;
+
     IERC20 public underlyingToken;
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     /***************
     EVENTS
@@ -54,6 +54,7 @@ contract SaveToken is ERC20, Pausable, AccessControl {
         insuranceAdapter = _insuranceAdapter;
         insuranceToken = _insuranceToken;
         uniswapFactory = _uniswapFactory;
+        pauser = _admin;
 
         underlyingToken = IERC20(underlyingTokenAddress);
 
@@ -69,8 +70,6 @@ contract SaveToken is ERC20, Pausable, AccessControl {
         if (_rewardsLogic != address(0)) {
             RewardsLib.setLogicAddress(_rewardsLogic);
         }
-
-        _setupRole(PAUSER_ROLE, _admin);
  
         ERC20StorageLib.setERC20Metadata(_name, _symbol, _decimals);
 
@@ -209,13 +208,13 @@ contract SaveToken is ERC20, Pausable, AccessControl {
 
     /// @notice Allows admin to pause contract
     function pause() external {
-        require(hasRole(PAUSER_ROLE, msg.sender), "Caller must be admin");
+        require(pauser == msg.sender, "Caller must be admin");
         _pause();
     }
 
     /// @notice Allows admin to unpause contract
     function unpause() external {
-        require(hasRole(PAUSER_ROLE, msg.sender), "Caller must be admin");
+        require(pauser == msg.sender, "Caller must be admin");
         _unpause();
     }
 
