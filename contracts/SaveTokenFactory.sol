@@ -8,7 +8,7 @@ contract SaveTokenFactory {
 
     // addresses of deployed saveTokens
     address[] public saveTokens;
-    address public admin;
+    address internal admin;
 
     event SaveTokenCreated(address addr);
 
