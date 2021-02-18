@@ -34,6 +34,7 @@ contract SaveToken is ERC20, Pausable {
     event Mint(uint256 amount, address user);
     event WithdrawForUnderlyingAsset(uint256 amount, address user);
     event WithdrawReward(uint256 amount, address user);
+    event RewardsBalance(uint256 amount, address user);
 
     constructor(
         address _underlyingTokenAddress,
@@ -227,6 +228,16 @@ contract SaveToken is ERC20, Pausable {
         return balance;
     }
 
+    /// @dev Returns the rewards token balance that has accured
+    /// @return Returns the balance of rewards tokens
+    function getRewardsBalance() external returns (uint256) {
+        bytes memory signature_getRewardsBalance = abi.encodeWithSignature("getRewardsBalance()");
+        uint256 balance = _delegatecall(assetAdapter, signature_getRewardsBalance);
+        
+        emit RewardsBalance(balance, msg.sender);
+        return balance;
+    }
+
     /***************
     INTERNAL FUNCTIONS
     ***************/
@@ -252,6 +263,4 @@ contract SaveToken is ERC20, Pausable {
         return ret;
     }
     
-    // solhint-disable-next-line
-    receive() external payable {}
 }
