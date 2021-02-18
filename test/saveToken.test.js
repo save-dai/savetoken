@@ -351,8 +351,13 @@ contract('SaveToken', async (accounts) => {
         diffIncDai = cDaiBalanceInitial.sub(cDAIbalanceFinal);
         diffInocDai = ocDaiBalanceInitial.sub(ocDAIbalanceFinal);
 
-        assert.equal(diffIncDai.toString(), amount);
-        assert.equal(diffInocDai.toString(), amount);
+        expired = await ocDaiInstance.hasExpired();
+        expired ?
+          assert.equal(diffInocDai.toString(), 0) &&
+          assert.equal(diffIncDai.toString(), amount)
+          :
+          assert.equal(diffInocDai.toString(), diffInocDai) &&
+          assert.equal(diffIncDai.toString(), amount);
       });
       it('should send msg.sender the underlying asset', async () => {
         tokenAmount = await saveDaiInstance.balanceOf(userWallet1);
@@ -381,7 +386,11 @@ contract('SaveToken', async (accounts) => {
         const updatedUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
         const diff = (updatedUnderlyingBalance.sub(initialUnderlyingBalance)) / 1e18;
 
-        assert.approximately(daiBoughtTotal, diff, 0.0000009);
+        expired = await ocDaiInstance.hasExpired();
+        expired ?
+          assert.approximately(daiReedem, diff, 0.0000009)
+          :
+          assert.approximately(daiBoughtTotal, diff, 0.0000009);
       });
       it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
         const userCompBalance = await compInstance.balanceOf(userWallet1);
