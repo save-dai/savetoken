@@ -478,6 +478,43 @@ contract('SaveToken', async (accounts) => {
         expectEvent(withdrawRewardReceipt, 'WithdrawReward', { amount: diff, user: wallet });
       });
     });
+    describe('getRewardsBalance', async function () {
+      beforeEach(async () => {
+        // Mint saveToken
+        const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
+        const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
+        proxyAddress = event.args[0];
+      });
+      it('should return total rewards balance that has yielded', async () => {
+        const initialCOMPBalance = await compInstance.balanceOf(proxyAddress);
+
+        await time.advanceBlock();
+
+        await saveDaiInstance.getRewardsBalance({ from: userWallet1 });
+
+        const metaData = await lensContract.methods.getCompBalanceMetadataExt(
+          compAddress, comptroller, proxyAddress).call();
+        const metaDataBalance = metaData[0];
+
+        const finalCOMPBalance = await compInstance.balanceOf(proxyAddress);
+        diff = finalCOMPBalance.sub(initialCOMPBalance);
+
+        assert.equal(metaDataBalance, diff);
+      });
+      it('should emit a RewardsBalance event with the msg.sender\'s COMP balance in their proxy', async () => {
+        await time.advanceBlock();
+
+        const initialCOMPBalance = await compInstance.balanceOf(proxyAddress);
+
+        const rewardsReceipt = await saveDaiInstance.getRewardsBalance({ from: userWallet1 });
+
+        const finalCOMPBalance = await compInstance.balanceOf(proxyAddress);
+        diff = finalCOMPBalance.sub(initialCOMPBalance);
+
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        expectEvent(rewardsReceipt, 'RewardsBalance', { amount: diff, user: wallet });
+      });
+    });
   });
 
   context('multiple SaveTokens deployed', function () {

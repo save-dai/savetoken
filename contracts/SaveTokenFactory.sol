@@ -12,7 +12,7 @@ contract SaveTokenFactory {
 
     event SaveTokenCreated(address addr);
 
-    constructor(address _admin) public {
+    constructor(address _admin) {
         admin = _admin;
     }
 
