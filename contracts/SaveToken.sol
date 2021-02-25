@@ -18,6 +18,9 @@ import "./utils/Pausable.sol";
 contract SaveToken is ERC20, Pausable {
     using SafeMath for uint256;
 
+    mapping (address => uint256) public assetBalances;
+    mapping (address => uint256) public insuranceBalances;
+
     address public underlyingTokenAddress;
     address public assetAdapter;
     address public assetToken;
@@ -96,7 +99,6 @@ contract SaveToken is ERC20, Pausable {
 
         // get cost of tokens to know how much to transfer from user's wallet
         uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
-
         uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
     
         // transfer total underlying token needed
@@ -125,7 +127,11 @@ contract SaveToken is ERC20, Pausable {
         require(insuranceTokens == amount, "insuranceTokens must equal amount");
 
         _mint(msg.sender, amount);
-        
+
+        // update asset and insurance token balances
+        assetBalances[msg.sender] = assetBalances[msg.sender].add(assetTokens);
+        insuranceBalances[msg.sender] = insuranceBalances[msg.sender].add(insuranceTokens);
+
         emit Mint(amount, msg.sender);
 
         return amount;
@@ -149,6 +155,13 @@ contract SaveToken is ERC20, Pausable {
 
         // transfer saveTokens
         super.transfer(recipient, amount);
+
+        // update asset and insurance token balances
+        assetBalances[msg.sender] = assetBalances[msg.sender].sub(amount);
+        insuranceBalances[msg.sender] = insuranceBalances[msg.sender].sub(amount);
+
+        assetBalances[recipient] = assetBalances[recipient].add(amount);
+        insuranceBalances[recipient] = insuranceBalances[recipient].add(amount);
 
         return true;
     }
@@ -178,6 +191,13 @@ contract SaveToken is ERC20, Pausable {
         // transfer saveTokens
         super.transferFrom(sender, recipient, amount);
 
+        // update asset and insurance token balances
+        assetBalances[sender] = assetBalances[sender].sub(amount);
+        insuranceBalances[sender] = insuranceBalances[sender].sub(amount);
+
+        assetBalances[recipient] = assetBalances[recipient].add(amount);
+        insuranceBalances[recipient] = insuranceBalances[recipient].add(amount);
+
         return true;
     }
 
@@ -199,6 +219,10 @@ contract SaveToken is ERC20, Pausable {
 
         //transfer underlying to msg.sender
         require(underlyingToken.transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
+
+        // update asset and insurance token balances
+        assetBalances[msg.sender] = assetBalances[msg.sender].sub(amount);
+        insuranceBalances[msg.sender] = insuranceBalances[msg.sender].sub(amount);
 
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 

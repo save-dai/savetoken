@@ -167,6 +167,15 @@ contract('SaveToken', async (accounts) => {
         const diff = initialBalance.sub(endingBalance);
         assert.equal(totalDaiCost.toString().substring(0, 6), diff.toString().substring(0, 6));
       });
+      it('should increase the user\'s assetTokens and insuranceTokens balances', async () => {
+        await saveDaiInstance.mint(amount, { from: userWallet1 });
+
+        const assetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const insuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        assert.equal(assetBalance, amount);
+        assert.equal(insuranceBalance, amount);
+      });
       it('should emit the amount of tokens minted', async () => {
         const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
         const wallet = web3.utils.toChecksumAddress(userWallet1);
@@ -236,6 +245,36 @@ contract('SaveToken', async (accounts) => {
 
         assert.equal(remainder.toString(), sendercDAIbalanceAfter.toString());
         assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
+      });
+      it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        await saveDaiInstance.transfer(recipient, amount, { from: userWallet1 });
+
+        const finalAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+        const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
+      });
+      it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
+        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+
+        await saveDaiInstance.transfer(recipient, amount, { from: userWallet1 });
+
+        const finalAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
+        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+
+        const asserDiff = finalAssetBalance.sub(initialAssetBalance);
+        const insuranceDiff = finalInsuranceBalance.sub(initialInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
     });
     describe('transferFrom', async function () {
@@ -319,6 +358,46 @@ contract('SaveToken', async (accounts) => {
 
         assert.equal(remainder.toString(), sendercDAIbalanceAfter.toString());
         assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
+      });
+      it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        // give approval to relayer to transfer tokens on sender's behalf
+        await saveDaiInstance.approve(relayer, amount, { from : userWallet1 });
+        await saveDaiInstance.transferFrom(
+          userWallet1, recipient, amount,
+          { from: relayer },
+        );
+
+        const finalAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+        const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
+      });
+      it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
+        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+
+        // give approval to relayer to transfer tokens on sender's behalf
+        await saveDaiInstance.approve(relayer, amount, { from : userWallet1 });
+        await saveDaiInstance.transferFrom(
+          userWallet1, recipient, amount,
+          { from: relayer },
+        );
+
+        const finalAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
+        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+
+        const asserDiff = finalAssetBalance.sub(initialAssetBalance);
+        const insuranceDiff = finalInsuranceBalance.sub(initialInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
     });
     describe('withdrawForUnderlyingAsset', function () {
@@ -429,6 +508,22 @@ contract('SaveToken', async (accounts) => {
         // Calculate the difference in saveDAI tokens
         const diff = initialBalance - finalBalance;
         assert.equal(diff, amount);
+      });
+      it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        // unbundle userWallet's SaveTokens
+        await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+
+        const finalAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
+        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+
+        const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+        const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
     });
     describe('pause and unpause', function () {
