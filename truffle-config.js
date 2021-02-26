@@ -33,6 +33,14 @@ module.exports = {
       gasPrice: 7000000000,  // 7 gwei (in wei) (default: 100 gwei)
     },
   },
+  mocha: {
+    reporter: 'eth-gas-reporter',
+    reporterOptions : {
+      currency: 'USD',
+      showTimeSpent: true,
+      excludeContracts: ['Migrations'],
+    },
+  },
 
   // Configure your compilers
   compilers: {

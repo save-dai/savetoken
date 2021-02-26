@@ -25,6 +25,8 @@
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-mocha": "^8.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "eth-gas-reporter": "^0.2.21"
+  },
   "description": ""
 }
