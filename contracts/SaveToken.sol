@@ -69,7 +69,8 @@ contract SaveToken is ERC20, Pausable {
             assetToken, 
             insuranceAdapter, 
             insuranceToken, 
-            _uniswapFactory
+            uniswapFactory,
+            address(this)
         );
 
         if (_rewardsLogic != address(0)) {
