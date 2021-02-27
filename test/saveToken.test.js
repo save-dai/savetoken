@@ -9,15 +9,18 @@ const {
   balance,
   expectRevert,
   expectEvent,
+  constants,
 } = require('@openzeppelin/test-helpers');
 
 const SaveTokenFactory = artifacts.require('SaveTokenFactory');
 const SaveToken = artifacts.require('SaveToken');
 const COMPFarmer = artifacts.require('COMPFarmer');
 const CompoundAdapter = artifacts.require('CompoundAdapter');
+const AaveAdapter = artifacts.require('AaveAdapter');
 const OpynAdapter = artifacts.require('OpynAdapter');
 const ERC20 = artifacts.require('ERC20');
 const ICToken = artifacts.require('ICToken');
+const IAToken = artifacts.require('IAToken');
 const IOToken = artifacts.require('IOToken');
 const IUniswapFactory = artifacts.require('IUniswapFactory');
 const IUniswapExchange = artifacts.require('IUniswapExchange');
@@ -29,12 +32,13 @@ const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const cDaiAddress = '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643';
 const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
+const aDaiAddress = '0x028171bCA77440897B824Ca71D1c56caC55b68A3';
 
 const usdcAddress = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const cUSDCAddress = '0x39AA39c021dfbaE8faC545936693aC917d5E7563';
 const ocUSDCAddress = '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4';
 
-const compAddress = web3.utils.toChecksumAddress('0xc00e94cb662c3520282e6f5717214004a7f26888');
+const compAddress = web3.utils.toChecksumAddress('0xc00e94Cb662C3520282E6f5717214004A7f26888');
 const lensAddress = web3.utils.toChecksumAddress('0xd513d22422a3062Bd342Ae374b4b9c20E0a9a074');
 const comptroller = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
 
@@ -56,6 +60,7 @@ contract('SaveToken', async (accounts) => {
     compInstance = await ERC20.at(compAddress);
     ocDaiInstance = await IOToken.at(ocDaiAddress);
     cDaiInstance = await ICToken.at(cDaiAddress);
+    aDaiInstance = await IAToken.at(aDaiAddress);
 
     uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
     ocDaiExchangeAddress = await uniswapFactory.getExchange(ocDaiAddress);
@@ -119,7 +124,7 @@ contract('SaveToken', async (accounts) => {
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(1000));
   });
 
-  context('one saveToken deployed: saveDAI', function () {
+  context('one saveToken deployed: saveDAI - Compound and Opyn', function () {
     describe('mint', function () {
       it('should revert if paused', async () => {
         await saveDaiInstance.pause({ from: owner });
@@ -617,6 +622,195 @@ contract('SaveToken', async (accounts) => {
 
         const wallet = web3.utils.toChecksumAddress(userWallet1);
         expectEvent(rewardsReceipt, 'RewardsBalance', { amount: diff, user: wallet });
+      });
+    });
+  });
+
+  context('one saveToken deployed: saveDAI - Aave and Cover', function () {
+    beforeEach(async () => {
+      saveTokenFactory = await SaveTokenFactory.new(owner);
+      aaveAdapter = await AaveAdapter.new();
+      // TODO: Replace w/ CoverAdapter
+      opynAdapter = await OpynAdapter.new();
+
+      aaveAdapterInstance = await AaveAdapter.at(aaveAdapter.address);
+      opynAdapterInstance = await OpynAdapter.at(opynAdapter.address);
+
+      saveToken3 = await saveTokenFactory.createSaveToken(
+        daiAddress,
+        aaveAdapter.address,
+        aDaiAddress,
+        opynAdapter.address,
+        ocDaiAddress,
+        // TODO: Replace w/ Balancer
+        uniswapFactoryAddress,
+        constants.ZERO_ADDRESS,
+        // TODO: Determine naming convention for SaveTokens
+        'SaveDAI_Aave',
+        'SDAT',
+        8,
+      );
+      saveDaiAaveAddress = saveToken3.logs[0].args.addr;
+      saveDaiAaveInstance = await SaveToken.at(saveDaiAaveAddress);
+
+      // approve 1000 DAI
+      await daiInstance.approve(saveDaiAaveAddress, ether('1000'), { from: userWallet1 });
+    });
+    describe('mint', function () {
+      it('should revert if paused', async () => {
+        await saveDaiAaveInstance.pause({ from: owner });
+        // mint saveDAI tokens
+        await expectRevert(saveDaiAaveInstance.mint(amount, { from: userWallet1 }), 'Pausable: paused');
+      });
+      it('should mint SaveTokens', async () => {
+        await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
+
+        const ocDAIbalance = await ocDaiInstance.balanceOf(saveDaiAaveAddress);
+        const aDAIbalance = await aDaiInstance.balanceOf(saveDaiAaveAddress);
+        const saveDaiAaveMinted = await saveDaiAaveInstance.balanceOf(userWallet1);
+
+        // all token balances should match
+        assert.equal(aDAIbalance.toString(), amount);
+        assert.equal(ocDAIbalance.toString(), amount);
+        assert.equal(saveDaiAaveMinted.toString(), amount);
+      });
+      it('should decrease userWallet DAI balance', async () => {
+        const initialDaiBalance = await daiInstance.balanceOf(userWallet1);
+
+        let assetCost = amount;
+        assetCost = new BN(assetCost.toString());
+
+        const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice(amount);
+        const insuranceCost = await daiExchange.getTokenToEthOutputPrice(ethToPay);
+
+        const totalDaiCost = assetCost.add(insuranceCost);
+
+        await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
+
+        const finalDaiBalance = await daiInstance.balanceOf(userWallet1);
+
+        const diff = initialDaiBalance.sub(finalDaiBalance);
+
+        assert.equal(totalDaiCost.toString(), diff.toString());
+      });
+      it('should increase the user\'s assetTokens and insuranceTokens balances', async () => {
+        await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
+
+        const assetBalance = await saveDaiAaveInstance.assetBalances.call(userWallet1);
+        const insuranceBalance = await saveDaiAaveInstance.insuranceBalances.call(userWallet1);
+
+        assert.equal(assetBalance, amount);
+        assert.equal(insuranceBalance, amount);
+      });
+      it('should emit the amount of tokens minted', async () => {
+        const receipt = await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        expectEvent(receipt, 'Mint', { amount: amount, user: wallet });
+      });
+    });
+    describe('transfer', function () {
+      beforeEach(async () => {
+
+      });
+      it('should transfer all saveDAI tokens from sender to recipient (full transfer)', async () => {
+
+      });
+      it('should deploy proxy and send all cDAI to recipient (full transfer)', async () => {
+
+      });
+      it('should transfer saveDAI from sender to recipient (partial transfer)', async () => {
+
+      });
+      it('should deploy proxy and send cDAI to recipient (partial transfer)', async () => {
+
+      });
+      it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
+
+      });
+      it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
+
+      });
+    });
+    describe('transferFrom', async function () {
+      beforeEach(async () => {
+
+      });
+      it('should transfer all saveDAI tokens from sender to recipient (full transfer)', async () => {
+
+      });
+      it('should deploy proxy and send all cDAI to recipient (full transfer)', async () => {
+
+      });
+      it('should transfer saveDAI tokens from sender to recipient (partial transfer)', async () => {
+
+      });
+      it('should deploy proxy and send cDAI to recipient (partial transfer)', async () => {
+
+      });
+      it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
+
+      });
+      it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
+
+      });
+    });
+    describe('withdrawForUnderlyingAsset', function () {
+      beforeEach(async () => {
+
+      });
+      it('revert if the user does not have enough SaveTokens to unbundle', async () => {
+
+      });
+      it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+
+      });
+      it('should send msg.sender the underlying asset', async () => {
+
+      });
+      it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
+
+      });
+      it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
+
+      });
+      it('should burn the amount of msg.sender\'s SaveTokens', async () => {
+
+      });
+      it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+
+      });
+    });
+    describe('pause and unpause', function () {
+      it('should revert if paused by non admin', async () => {
+
+      });
+      it('should revert if unpaused by non admin', async () => {
+
+      });
+    });
+    describe('withdrawReward', function () {
+      beforeEach(async () => {
+
+      });
+      it('should revert if the transfer of rewards is unsuccessful', async () => {
+
+      });
+      it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
+
+      });
+      it('should emit a WithdrawReward event with the msg.sender\'s address and the amount of rewards tokens withdrawn', async () => {
+
+      });
+    });
+    describe('getRewardsBalance', async function () {
+      beforeEach(async () => {
+
+      });
+      it('should return total rewards balance that has yielded', async () => {
+
+      });
+      it('should emit a RewardsBalance event with the msg.sender\'s COMP balance in their proxy', async () => {
+
       });
     });
   });
