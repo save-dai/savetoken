@@ -3,7 +3,6 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/ERC20StorageLib.sol";
 import "./libraries/RewardsLib.sol";
@@ -18,19 +17,6 @@ import "./utils/Pausable.sol";
 contract SaveToken is ERC20, Pausable {
     using SafeMath for uint256;
 
-    mapping (address => uint256) public assetBalances;
-    mapping (address => uint256) public insuranceBalances;
-
-    address public underlyingTokenAddress;
-    address public assetAdapter;
-    address public assetToken;
-    address public insuranceAdapter;
-    address public insuranceToken;
-    address public uniswapFactory;
-    address public pauser;
-
-    IERC20 public underlyingToken;
-
     /***************
     EVENTS
     ***************/
@@ -40,29 +26,19 @@ contract SaveToken is ERC20, Pausable {
     event RewardsBalance(uint256 amount, address user);
 
     constructor(
-        address _underlyingTokenAddress,
-        address _assetAdapter,
-        address _assetToken,
-        address _insuranceAdapter,
-        address _insuranceToken,
-        address _uniswapFactory,
-        address _rewardsLogic,
-        address _admin,
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals
+        address underlyingTokenAddress,
+        address assetAdapter,
+        address assetToken,
+        address insuranceAdapter,
+        address insuranceToken,
+        address uniswapFactory,
+        address rewardsLogic,
+        address admin,
+        string memory name,
+        string memory symbol,
+        uint8 decimals
         )
         {
-        underlyingTokenAddress = _underlyingTokenAddress;
-        assetAdapter = _assetAdapter;
-        assetToken = _assetToken;
-        insuranceAdapter = _insuranceAdapter;
-        insuranceToken = _insuranceToken;
-        uniswapFactory = _uniswapFactory;
-        pauser = _admin;
-
-        underlyingToken = IERC20(underlyingTokenAddress);
-
         StorageLib.setAddresses(
             underlyingTokenAddress, 
             assetAdapter, 
@@ -70,14 +46,15 @@ contract SaveToken is ERC20, Pausable {
             insuranceAdapter, 
             insuranceToken, 
             uniswapFactory,
-            address(this)
+            address(this),
+            admin
         );
 
-        if (_rewardsLogic != address(0)) {
-            RewardsLib.setLogicAddress(_rewardsLogic);
+        if (rewardsLogic != address(0)) {
+            RewardsLib.setLogicAddress(rewardsLogic);
         }
 
-        ERC20StorageLib.setERC20Metadata(_name, _symbol, _decimals);
+        ERC20StorageLib.setERC20Metadata(name, symbol, decimals);
 
         StorageLib.SaveTokenStorage storage st = StorageLib.saveTokenStorage();
 
@@ -99,12 +76,12 @@ contract SaveToken is ERC20, Pausable {
         );
 
         // get cost of tokens to know how much to transfer from user's wallet
-        uint256 assetCost = _delegatecall(assetAdapter, signature_cost);
-        uint256 insuranceCost = _delegatecall(insuranceAdapter, signature_insurance);
+        uint256 assetCost = _delegatecall(StorageLib.assetAdapter(), signature_cost);
+        uint256 insuranceCost = _delegatecall(StorageLib.insuranceAdapter(), signature_insurance);
     
         // transfer total underlying token needed
         require(
-            underlyingToken.transferFrom(
+            StorageLib.underlyingInstance().transferFrom(
                 msg.sender,
                 address(this),
                 (assetCost.add(insuranceCost))
@@ -121,8 +98,8 @@ contract SaveToken is ERC20, Pausable {
             insuranceCost
         );
 
-        uint256 assetTokens = _delegatecall(assetAdapter, signature_hold);
-        uint256 insuranceTokens = _delegatecall(insuranceAdapter, signature_buy);
+        uint256 assetTokens = _delegatecall(StorageLib.assetAdapter(), signature_hold);
+        uint256 insuranceTokens = _delegatecall(StorageLib.insuranceAdapter(), signature_buy);
 
         require(assetTokens == amount, "assetTokens must equal amount");
         require(insuranceTokens == amount, "insuranceTokens must equal amount");
@@ -130,8 +107,8 @@ contract SaveToken is ERC20, Pausable {
         _mint(msg.sender, amount);
 
         // update asset and insurance token balances
-        assetBalances[msg.sender] = assetBalances[msg.sender].add(assetTokens);
-        insuranceBalances[msg.sender] = insuranceBalances[msg.sender].add(insuranceTokens);
+        StorageLib.updateAssetBalance(msg.sender, StorageLib.getAssetBalance(msg.sender).add(assetTokens));
+        StorageLib.updateInsuranceBalance(msg.sender, StorageLib.getInsuranceBalance(msg.sender).add(insuranceTokens));
 
         emit Mint(amount, msg.sender);
 
@@ -151,18 +128,18 @@ contract SaveToken is ERC20, Pausable {
                 "transfer(address,uint256)",
                 recipient, amount
             );
-            _delegatecall(assetAdapter, signature_transfer);
+            _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
         // transfer saveTokens
         super.transfer(recipient, amount);
 
         // update asset and insurance token balances
-        assetBalances[msg.sender] = assetBalances[msg.sender].sub(amount);
-        insuranceBalances[msg.sender] = insuranceBalances[msg.sender].sub(amount);
+        StorageLib.updateAssetBalance(msg.sender, StorageLib.getAssetBalance(msg.sender).sub(amount));
+        StorageLib.updateInsuranceBalance(msg.sender, StorageLib.getInsuranceBalance(msg.sender).sub(amount));
 
-        assetBalances[recipient] = assetBalances[recipient].add(amount);
-        insuranceBalances[recipient] = insuranceBalances[recipient].add(amount);
+        StorageLib.updateAssetBalance(recipient, StorageLib.getAssetBalance(recipient).add(amount));
+        StorageLib.updateInsuranceBalance(recipient, StorageLib.getInsuranceBalance(recipient).add(amount));
 
         return true;
     }
@@ -186,18 +163,18 @@ contract SaveToken is ERC20, Pausable {
                 "transferFrom(address,address,uint256)",
                 sender, recipient, amount
             );
-            _delegatecall(assetAdapter, signature_transfer);
+            _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
         // transfer saveTokens
         super.transferFrom(sender, recipient, amount);
 
         // update asset and insurance token balances
-        assetBalances[sender] = assetBalances[sender].sub(amount);
-        insuranceBalances[sender] = insuranceBalances[sender].sub(amount);
+        StorageLib.updateAssetBalance(sender, StorageLib.getAssetBalance(sender).sub(amount));
+        StorageLib.updateInsuranceBalance(sender, StorageLib.getInsuranceBalance(sender).sub(amount));
 
-        assetBalances[recipient] = assetBalances[recipient].add(amount);
-        insuranceBalances[recipient] = insuranceBalances[recipient].add(amount);
+        StorageLib.updateAssetBalance(recipient, StorageLib.getAssetBalance(recipient).add(amount));
+        StorageLib.updateInsuranceBalance(recipient, StorageLib.getInsuranceBalance(recipient).add(amount));
 
         return true;
     }
@@ -215,15 +192,15 @@ contract SaveToken is ERC20, Pausable {
             amount
         );
 
-        uint256 underlyingForAsset = _delegatecall(assetAdapter, signature_withdraw);
-        uint256 underlyingForInsurance = _delegatecall(insuranceAdapter, signature_sellInsurance);
+        uint256 underlyingForAsset = _delegatecall(StorageLib.assetAdapter(), signature_withdraw);
+        uint256 underlyingForInsurance = _delegatecall(StorageLib.insuranceAdapter(), signature_sellInsurance);
 
         //transfer underlying to msg.sender
-        require(underlyingToken.transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
+        require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
 
         // update asset and insurance token balances
-        assetBalances[msg.sender] = assetBalances[msg.sender].sub(amount);
-        insuranceBalances[msg.sender] = insuranceBalances[msg.sender].sub(amount);
+        StorageLib.updateAssetBalance(msg.sender, StorageLib.getAssetBalance(msg.sender).sub(amount));
+        StorageLib.updateInsuranceBalance(msg.sender, StorageLib.getInsuranceBalance(msg.sender).sub(amount));
 
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
@@ -232,13 +209,13 @@ contract SaveToken is ERC20, Pausable {
 
     /// @notice Allows admin to pause contract
     function pause() external {
-        require(pauser == msg.sender, "Caller must be admin");
+        require(StorageLib.admin() == msg.sender, "Caller must be admin");
         _pause();
     }
 
     /// @notice Allows admin to unpause contract
     function unpause() external {
-        require(pauser == msg.sender, "Caller must be admin");
+        require(StorageLib.admin() == msg.sender, "Caller must be admin");
         _unpause();
     }
 
@@ -247,17 +224,29 @@ contract SaveToken is ERC20, Pausable {
     function withdrawReward() external returns (uint256) {
         bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
 
-        uint256 balance = _delegatecall(assetAdapter, signature_withdrawReward);
+        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
 
         emit WithdrawReward(balance, msg.sender);
         return balance;
+    }
+
+    /// @dev Returns the user's asset token balance
+    /// @return Returns the asset balance
+    function getAssetBalance(address account) external view returns (uint256) {
+        return StorageLib.getAssetBalance(account);
+    }
+
+    /// @dev Returns the user's insurance token balance
+    /// @return Returns the insurance balance
+    function getInsuranceBalance(address account) external view returns (uint256) {
+        return StorageLib.getInsuranceBalance(account);
     }
 
     /// @dev Returns the rewards token balance that has accured
     /// @return Returns the balance of rewards tokens
     function getRewardsBalance() external returns (uint256) {
         bytes memory signature_getRewardsBalance = abi.encodeWithSignature("getRewardsBalance()");
-        uint256 balance = _delegatecall(assetAdapter, signature_getRewardsBalance);
+        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_getRewardsBalance);
         
         emit RewardsBalance(balance, msg.sender);
         return balance;

@@ -3,6 +3,8 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 library StorageLib {
     bytes32 constant SAVETOKEN_STORAGE_POSITION = keccak256(
         "save.token.save.storage"
@@ -17,6 +19,10 @@ library StorageLib {
         address insuranceToken;
         address uniswapFactory;
         address saveToken;
+        address admin;
+        IERC20 underlyingInstance;
+        mapping(address => uint256) assetBalances;
+        mapping(address => uint256) insuranceBalances;
     }
 
     function saveTokenStorage()
@@ -37,7 +43,8 @@ library StorageLib {
         address _insuranceAdapter,
         address _insuranceToken,
         address _uniswapFactory,
-        address _saveToken
+        address _saveToken,
+        address _admin
     ) internal {
         SaveTokenStorage storage st = saveTokenStorage();
         st.underlyingToken = _underlyingToken;
@@ -47,6 +54,30 @@ library StorageLib {
         st.insuranceToken = _insuranceToken;
         st.uniswapFactory = _uniswapFactory;
         st.saveToken = _saveToken;
+        st.admin = _admin;
+        st.underlyingInstance = IERC20(_underlyingToken);
+    }
+
+    function updateAssetBalance(address _user, uint256 _amount) internal {
+        SaveTokenStorage storage st = saveTokenStorage();
+        st.assetBalances[_user] = _amount;
+    }
+
+    function updateInsuranceBalance(address _user, uint256 _amount) internal {
+        SaveTokenStorage storage st = saveTokenStorage();
+        st.insuranceBalances[_user] = _amount;
+    }
+
+    function getAssetBalance(address _user) internal view returns (uint256) {
+        return saveTokenStorage().assetBalances[_user];
+    }
+
+    function getInsuranceBalance(address _user) internal view returns (uint256) {
+        return saveTokenStorage().insuranceBalances[_user];
+    }
+
+    function underlyingInstance() internal view returns (IERC20 underlyingInstance_) {
+        underlyingInstance_ = saveTokenStorage().underlyingInstance;
     }
 
     function underlyingToken() internal view returns (address underlyingToken_) {
@@ -75,5 +106,9 @@ library StorageLib {
 
     function saveToken() internal view returns (address saveToken_) {
         saveToken_ = saveTokenStorage().saveToken;
+    }
+    
+    function admin() internal view returns (address admin_) {
+        admin_ = saveTokenStorage().admin;
     }
 }
