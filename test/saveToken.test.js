@@ -74,14 +74,14 @@ contract('SaveToken', async (accounts) => {
     await daiExchange.ethToTokenSwapInput(
       1,
       deadline,
-      { from: userWallet1, value: ether('20') },
+      { from: userWallet1, value: ether('50') },
     );
 
     // swap ETH for USDC
     await usdcExchange.ethToTokenSwapInput(
       1,
       deadline,
-      { from: userWallet2, value: ether('20') },
+      { from: userWallet2, value: ether('50') },
     );
   });
 
@@ -175,8 +175,8 @@ contract('SaveToken', async (accounts) => {
       it('should increase the user\'s assetTokens and insuranceTokens balances', async () => {
         await saveDaiInstance.mint(amount, { from: userWallet1 });
 
-        const assetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const insuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const assetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const insuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         assert.equal(assetBalance, amount);
         assert.equal(insuranceBalance, amount);
@@ -252,13 +252,13 @@ contract('SaveToken', async (accounts) => {
         assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
       });
       it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
-        const initialAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const initialAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         await saveDaiInstance.transfer(recipient, amount, { from: userWallet1 });
 
-        const finalAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const finalAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const finalInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         const asserDiff = initialAssetBalance.sub(finalAssetBalance);
         const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
@@ -267,13 +267,13 @@ contract('SaveToken', async (accounts) => {
         assert.equal(insuranceDiff, amount);
       });
       it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
-        const initialAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
-        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+        const initialAssetBalance = await saveDaiInstance.getAssetBalance(recipient);
+        const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(recipient);
 
         await saveDaiInstance.transfer(recipient, amount, { from: userWallet1 });
 
-        const finalAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
-        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+        const finalAssetBalance = await saveDaiInstance.getAssetBalance(recipient);
+        const finalInsuranceBalance = await saveDaiInstance.getInsuranceBalance(recipient);
 
         const asserDiff = finalAssetBalance.sub(initialAssetBalance);
         const insuranceDiff = finalInsuranceBalance.sub(initialInsuranceBalance);
@@ -365,8 +365,8 @@ contract('SaveToken', async (accounts) => {
         assert.equal(partialTransfer.toString(), recipientcDAIBalanceAfter.toString());
       });
       it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
-        const initialAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const initialAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         // give approval to relayer to transfer tokens on sender's behalf
         await saveDaiInstance.approve(relayer, amount, { from : userWallet1 });
@@ -375,8 +375,8 @@ contract('SaveToken', async (accounts) => {
           { from: relayer },
         );
 
-        const finalAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const finalAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const finalInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         const asserDiff = initialAssetBalance.sub(finalAssetBalance);
         const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
@@ -385,8 +385,8 @@ contract('SaveToken', async (accounts) => {
         assert.equal(insuranceDiff, amount);
       });
       it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
-        const initialAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
-        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+        const initialAssetBalance = await saveDaiInstance.getAssetBalance(recipient);
+        const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(recipient);
 
         // give approval to relayer to transfer tokens on sender's behalf
         await saveDaiInstance.approve(relayer, amount, { from : userWallet1 });
@@ -395,8 +395,8 @@ contract('SaveToken', async (accounts) => {
           { from: relayer },
         );
 
-        const finalAssetBalance = await saveDaiInstance.assetBalances.call(recipient);
-        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(recipient);
+        const finalAssetBalance = await saveDaiInstance.getAssetBalance(recipient);
+        const finalInsuranceBalance = await saveDaiInstance.getInsuranceBalance(recipient);
 
         const asserDiff = finalAssetBalance.sub(initialAssetBalance);
         const insuranceDiff = finalInsuranceBalance.sub(initialInsuranceBalance);
@@ -515,14 +515,14 @@ contract('SaveToken', async (accounts) => {
         assert.equal(diff, amount);
       });
       it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
-        const initialAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const initialInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const initialAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         // unbundle userWallet's SaveTokens
         await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
-        const finalAssetBalance = await saveDaiInstance.assetBalances.call(userWallet1);
-        const finalInsuranceBalance = await saveDaiInstance.insuranceBalances.call(userWallet1);
+        const finalAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
+        const finalInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
         const asserDiff = initialAssetBalance.sub(finalAssetBalance);
         const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
@@ -696,8 +696,8 @@ contract('SaveToken', async (accounts) => {
       it('should increase the user\'s assetTokens and insuranceTokens balances', async () => {
         await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
 
-        const assetBalance = await saveDaiAaveInstance.assetBalances.call(userWallet1);
-        const insuranceBalance = await saveDaiAaveInstance.insuranceBalances.call(userWallet1);
+        const assetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const insuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
         assert.equal(assetBalance, amount);
         assert.equal(insuranceBalance, amount);
