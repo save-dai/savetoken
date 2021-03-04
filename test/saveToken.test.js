@@ -756,61 +756,110 @@ contract('SaveToken', async (accounts) => {
     });
     describe('withdrawForUnderlyingAsset', function () {
       beforeEach(async () => {
-
+        // Mint saveToken
+        const receipt = await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
       });
       it('revert if the user does not have enough SaveTokens to unbundle', async () => {
-
+        await expectRevert(saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
+          'must successfully execute delegatecall');
       });
       it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+        // identify initial balances
+        const aDAIbalanceInitial = await aDaiInstance.balanceOf(saveDaiAaveAddress);
+        const ocDAIbalanceInitial = await ocDaiInstance.balanceOf(saveDaiAaveAddress);
+        // all token balances should match
+        assert.equal(aDAIbalanceInitial.toString(), amount);
+        assert.equal(ocDAIbalanceInitial.toString(), amount);
 
+        // unbundle userWallet1's SaveTokens
+        await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+
+        // identify final balances
+        const aDAIbalanceFinal = await aDaiInstance.balanceOf(saveDaiAaveAddress);
+        const ocDAIbalanceFinal = await ocDaiInstance.balanceOf(saveDaiAaveAddress);
+
+        diffInaDai = aDAIbalanceInitial.sub(aDAIbalanceFinal);
+        diffInocDai = ocDAIbalanceInitial.sub(ocDAIbalanceFinal);
+
+        expired = await ocDaiInstance.hasExpired();
+        expired ?
+          assert.equal(diffInocDai.toString(), 0) &&
+          assert.equal(diffInaDai.toString(), amount)
+          :
+          assert.equal(diffInocDai.toString(), diffInocDai) &&
+          assert.equal(diffInaDai.toString(), amount);
       });
       it('should send msg.sender the underlying asset', async () => {
+        // dai already deposited
+        daiAmount = await saveDaiAaveInstance.balanceOf(userWallet1);
+        daiAmount = daiAmount.toNumber();
 
-      });
-      it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
+        // idenitfy the user's initialUnderlyingBalance
+        initialUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
 
+        // calculate ocDAI for DAI on uniswap
+        const eth = await ocDaiExchange.getTokenToEthInputPrice(daiAmount);
+        let daiSwapped = await daiExchange.getEthToTokenInputPrice(eth);
+        daiSwapped = daiSwapped / 1e18;
+
+        const daiTotal = daiAmount + daiSwapped;
+
+        // unbundle userWallet1's tokens
+        await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+
+        // idenitfy the user's updatedUnderlyingBalance
+        const updatedUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
+        const diff = updatedUnderlyingBalance.sub(initialUnderlyingBalance);
+
+        expired = await ocDaiInstance.hasExpired();
+        expired ?
+          assert.equal(daiAmount, diff)
+          :
+          assert.approximately(daiTotal, diff, 0.0000009);
       });
       it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
+        // unbundle userWallet1's tokens
+        const withdrawalReceipt = await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
+        const wallet = web3.utils.toChecksumAddress(userWallet1);
+        expectEvent(withdrawalReceipt, 'WithdrawForUnderlyingAsset', { amount: amount, user: wallet });
       });
       it('should burn the amount of msg.sender\'s SaveTokens', async () => {
-
+        const initialBalance = await saveDaiAaveInstance.balanceOf(userWallet1);
+        // unbundle userWallet's SaveTokens
+        await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+        // Idenitfy the user's finanl balance
+        const finalBalance = await saveDaiAaveInstance.balanceOf(userWallet1);
+        // Calculate the difference in saveDAI tokens
+        const diff = initialBalance - finalBalance;
+        assert.equal(diff, amount);
       });
       it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
+        // unbundle userWallet's SaveTokens
+        await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+
+        const finalAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const finalInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
+
+        const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+        const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
     });
     describe('pause and unpause', function () {
       it('should revert if paused by non admin', async () => {
-
+        await expectRevert(saveDaiAaveInstance.pause({ from: userWallet1 }), 'Caller must be admin',
+        );
       });
       it('should revert if unpaused by non admin', async () => {
-
-      });
-    });
-    describe('withdrawReward', function () {
-      beforeEach(async () => {
-
-      });
-      it('should revert if the transfer of rewards is unsuccessful', async () => {
-
-      });
-      it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
-
-      });
-      it('should emit a WithdrawReward event with the msg.sender\'s address and the amount of rewards tokens withdrawn', async () => {
-
-      });
-    });
-    describe('getRewardsBalance', async function () {
-      beforeEach(async () => {
-
-      });
-      it('should return total rewards balance that has yielded', async () => {
-
-      });
-      it('should emit a RewardsBalance event with the msg.sender\'s COMP balance in their proxy', async () => {
-
+        await saveDaiAaveInstance.pause({ from: owner });
+        await expectRevert(saveDaiAaveInstance.unpause({ from: userWallet1 }), 'Caller must be admin',
+        );
       });
     });
   });
