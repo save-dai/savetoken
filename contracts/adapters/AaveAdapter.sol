@@ -23,12 +23,8 @@ contract AaveAdapter is IAsset {
 
         uint256 initialBalance = aToken.balanceOf(StorageLib.saveToken());
 
-        address lendingPoolAddressesProviderAddress = 0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5;
-        ILendingPoolAddressesProvider lendingPoolAddressProviderInstance = 
-            ILendingPoolAddressesProvider(lendingPoolAddressesProviderAddress);
-
-        address lendingPoolAddress = lendingPoolAddressProviderInstance.getLendingPool();
-        ILendingPool lendingPool = ILendingPool(lendingPoolAddress);
+        // get Aave Lending pool instance and address
+        (ILendingPool lendingPool, address lendingPoolAddress) = _getLendingPool();
 
         // Approve LendingPool contract to transfer underlying token
         underlyingToken.approve(lendingPoolAddress, amount);
@@ -37,7 +33,8 @@ contract AaveAdapter is IAsset {
 
         uint256 endingBalance = aToken.balanceOf(StorageLib.saveToken());
 
-        require(endingBalance.sub(initialBalance) == amount, 'Correct amount of aTokens must be minted');
+        require(endingBalance.sub(initialBalance) == amount,
+            'Correct amount of aTokens must be minted');
 
         return amount;
     }
@@ -57,7 +54,24 @@ contract AaveAdapter is IAsset {
     	override(IAsset) 
     	returns (uint256) 
     	{
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+        IAToken aToken = IAToken(StorageLib.assetToken());
 
+        uint256 initialBalance = aToken.balanceOf(StorageLib.saveToken());
+
+        // get Aave Lending pool instance and address
+        (ILendingPool lendingPool, address lendingPoolAddress) = _getLendingPool();
+
+        // Approve allowance so LendingPool can burn the associated aTokens
+        underlyingToken.approve(lendingPoolAddress, amount);
+        lendingPool.withdraw(StorageLib.underlyingToken(), amount, StorageLib.saveToken());
+
+        uint256 endingBalance = aToken.balanceOf(StorageLib.saveToken());
+
+        require(initialBalance.sub(endingBalance) == amount,
+            'Correct amount of aTokens must be burned');
+
+        return amount;
     }
 
     function withdrawReward() 
@@ -102,6 +116,16 @@ contract AaveAdapter is IAsset {
     	returns (uint256) 
     	{
 
+    }
+
+    function _getLendingPool() internal view returns (ILendingPool, address) {
+        address lendingPoolAddressesProviderAddress = 0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5;
+        ILendingPoolAddressesProvider lendingPoolAddressProviderInstance = 
+            ILendingPoolAddressesProvider(lendingPoolAddressesProviderAddress);
+
+        address lendingPoolAddress = lendingPoolAddressProviderInstance.getLendingPool();
+        ILendingPool lendingPool = ILendingPool(lendingPoolAddress);
+        return (lendingPool, lendingPoolAddress);
     }
 
 }
