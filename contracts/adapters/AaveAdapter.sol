@@ -110,14 +110,6 @@ contract AaveAdapter is IAsset {
 
     }
 
-    function balanceOf(address account) 
-    	external 
-    	override(IAsset) 
-    	returns (uint256) 
-    	{
-
-    }
-
     function _getLendingPool() internal view returns (ILendingPool, address) {
         address lendingPoolAddressesProviderAddress = 0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5;
         ILendingPoolAddressesProvider lendingPoolAddressProviderInstance = 

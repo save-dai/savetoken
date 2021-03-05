@@ -31,7 +31,7 @@ contract SaveToken is ERC20, Pausable {
         address assetToken,
         address insuranceAdapter,
         address insuranceToken,
-        address uniswapFactory,
+        address exchangeFactory,
         address rewardsLogic,
         address admin,
         string memory name,
@@ -45,7 +45,7 @@ contract SaveToken is ERC20, Pausable {
             assetToken, 
             insuranceAdapter, 
             insuranceToken, 
-            uniswapFactory,
+            exchangeFactory,
             address(this),
             admin
         );

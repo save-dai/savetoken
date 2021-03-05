@@ -754,10 +754,10 @@ contract('SaveToken', async (accounts) => {
 
       });
     });
-    describe('withdrawForUnderlyingAsset', function () {
+    describe.skip('withdrawForUnderlyingAsset', function () {
       beforeEach(async () => {
         // Mint saveToken
-        const receipt = await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
+        await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
       });
       it('revert if the user does not have enough SaveTokens to unbundle', async () => {
         await expectRevert(saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),

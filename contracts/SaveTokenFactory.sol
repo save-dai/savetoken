@@ -32,8 +32,7 @@ contract SaveTokenFactory {
         address assetToken,
         address insuranceAdapter,
         address insuranceToken,
-        // TODO: make uniswapFactory more general (exchangeFactory?) 
-        address uniswapFactory,
+        address exchangeFactory,
         address farmerAddress,
         string memory name,
         string memory symbol,
@@ -45,7 +44,7 @@ contract SaveTokenFactory {
             assetToken,
             insuranceAdapter,
             insuranceToken,
-            uniswapFactory,
+            exchangeFactory,
             farmerAddress,
             admin,
             name,
