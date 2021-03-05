@@ -99,7 +99,7 @@ contract AaveAdapter is IAsset {
     	override(IAsset) 
     	returns (bool) 
     	{
-
+        // no rewards-farmer for assets; transfer handled in SaveToken contract
     }
 
     function transferFrom(address sender, address recipient, uint256 amount)
@@ -107,7 +107,7 @@ contract AaveAdapter is IAsset {
         override(IAsset)
         returns (bool) 
         {
-
+        // no rewards-farmer for assets; transfer handled in SaveToken contract
     }
 
     function _getLendingPool() internal view returns (ILendingPool, address) {
