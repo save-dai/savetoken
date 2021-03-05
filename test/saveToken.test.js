@@ -710,48 +710,144 @@ contract('SaveToken', async (accounts) => {
     });
     describe('transfer', function () {
       beforeEach(async () => {
-
+        // Mint saveToken
+        await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
       });
       it('should transfer all saveDAI tokens from sender to recipient (full transfer)', async () => {
+        const senderBalanceBefore = await saveDaiAaveInstance.balanceOf(userWallet1);
 
-      });
-      it('should deploy proxy and send all cDAI to recipient (full transfer)', async () => {
+        await saveDaiAaveInstance.transfer(recipient, senderBalanceBefore, { from: userWallet1 });
 
+        const senderBalanceAfter = await saveDaiAaveInstance.balanceOf(userWallet1);
+        const recipientBalanceAfter = await saveDaiAaveInstance.balanceOf(recipient);
+
+        const diff = senderBalanceBefore.sub(senderBalanceAfter);
+
+        assert.equal(senderBalanceBefore.toString(), diff.toString());
+        assert.equal(senderBalanceBefore.toString(), recipientBalanceAfter.toString());
       });
       it('should transfer saveDAI from sender to recipient (partial transfer)', async () => {
+        const senderBalanceBefore = await saveDaiAaveInstance.balanceOf(userWallet1);
+        const partialTransfer = senderBalanceBefore.div(new BN (4));
+        const remainder = senderBalanceBefore.sub(partialTransfer);
 
-      });
-      it('should deploy proxy and send cDAI to recipient (partial transfer)', async () => {
+        await saveDaiAaveInstance.transfer(recipient, partialTransfer, { from: userWallet1 });
 
+        const senderBalanceAfter = await saveDaiAaveInstance.balanceOf(userWallet1);
+        const recipientBalanceAfter = await saveDaiAaveInstance.balanceOf(recipient);
+
+        assert.equal(remainder.toString(), senderBalanceAfter.toString());
+        assert.equal(partialTransfer.toString(), recipientBalanceAfter.toString());
       });
       it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
+        await saveDaiAaveInstance.transfer(recipient, amount, { from: userWallet1 });
+
+        const finalAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const finalInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
+
+        const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+        const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
       it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(recipient);
+        const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(recipient);
 
+        await saveDaiAaveInstance.transfer(recipient, amount, { from: userWallet1 });
+
+        const finalAssetBalance = await saveDaiAaveInstance.getAssetBalance(recipient);
+        const finalInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(recipient);
+
+        const asserDiff = finalAssetBalance.sub(initialAssetBalance);
+        const insuranceDiff = finalInsuranceBalance.sub(initialInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
     });
     describe('transferFrom', async function () {
       beforeEach(async () => {
-
+        // Mint saveToken
+        await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
       });
       it('should transfer all saveDAI tokens from sender to recipient (full transfer)', async () => {
+        const senderBalanceBefore = await saveDaiAaveInstance.balanceOf(userWallet1);
 
-      });
-      it('should deploy proxy and send all cDAI to recipient (full transfer)', async () => {
+        // give approval to relayer to transfer tokens on sender's behalf
+        await saveDaiAaveInstance.approve(relayer, senderBalanceBefore, { from : userWallet1 });
+        await saveDaiAaveInstance.transferFrom(
+          userWallet1, recipient, senderBalanceBefore,
+          { from: relayer },
+        );
 
+        const senderBalanceAfter = await saveDaiAaveInstance.balanceOf(userWallet1);
+        const recipientBalanceAfter = await saveDaiAaveInstance.balanceOf(recipient);
+
+        assert.equal(senderBalanceAfter.toString(), 0);
+        assert.equal(senderBalanceBefore.toString(), recipientBalanceAfter.toString());
       });
       it('should transfer saveDAI tokens from sender to recipient (partial transfer)', async () => {
+        const senderBalanceBefore = await saveDaiAaveInstance.balanceOf(userWallet1);
+        const partialTransfer = senderBalanceBefore.div(new BN (4));
+        const remainder = senderBalanceBefore.sub(partialTransfer);
 
-      });
-      it('should deploy proxy and send cDAI to recipient (partial transfer)', async () => {
+        // give approval to relayer to transfer saveDAI tokens on sender's behalf
+        await saveDaiAaveInstance.approve(relayer, partialTransfer, { from : userWallet1 });
+        await saveDaiAaveInstance.transferFrom(
+          userWallet1, recipient, partialTransfer,
+          { from: relayer },
+        );
 
+        const senderBalanceAfter = await saveDaiAaveInstance.balanceOf(userWallet1);
+        const recipientBalanceAfter = await saveDaiAaveInstance.balanceOf(recipient);
+
+        assert.equal(remainder.toString(), senderBalanceAfter.toString());
+        assert.equal(partialTransfer.toString(), recipientBalanceAfter.toString());
       });
       it('should decrease the sender\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
+        // give approval to relayer to transfer tokens on sender's behalf
+        await saveDaiAaveInstance.approve(relayer, amount, { from : userWallet1 });
+        await saveDaiAaveInstance.transferFrom(
+          userWallet1, recipient, amount,
+          { from: relayer },
+        );
+
+        const finalAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
+        const finalInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
+
+        const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+        const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
       it('should increase the recipient\'s assetTokens and insuranceTokens balances', async () => {
+        const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(recipient);
+        const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(recipient);
 
+        // give approval to relayer to transfer tokens on sender's behalf
+        await saveDaiAaveInstance.approve(relayer, amount, { from : userWallet1 });
+        await saveDaiAaveInstance.transferFrom(
+          userWallet1, recipient, amount,
+          { from: relayer },
+        );
+
+        const finalAssetBalance = await saveDaiAaveInstance.getAssetBalance(recipient);
+        const finalInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(recipient);
+
+        const asserDiff = finalAssetBalance.sub(initialAssetBalance);
+        const insuranceDiff = finalInsuranceBalance.sub(initialInsuranceBalance);
+
+        assert.equal(asserDiff, amount);
+        assert.equal(insuranceDiff, amount);
       });
     });
     describe.skip('withdrawForUnderlyingAsset', function () {
