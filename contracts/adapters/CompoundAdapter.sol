@@ -135,16 +135,6 @@ contract CompoundAdapter is IAsset, FarmerFactory {
         return amount.mul(exchangeRate).add(10**18 - 1).div(10**18);
     }
 
-    function balanceOf(address account) 
-        external
-        view
-        override(IAsset)
-        returns (uint256) 
-        {
-        ICToken cToken = ICToken(StorageLib.assetToken());
-        return cToken.balanceOf(account);
-    }
-
     function _deployProxy(address recipient) internal returns (address) {
         address cToken = StorageLib.assetToken();
         address underlyingToken = StorageLib.underlyingToken();
