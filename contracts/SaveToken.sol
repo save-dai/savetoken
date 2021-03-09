@@ -107,9 +107,8 @@ contract SaveToken is ERC20, Pausable {
         _mint(msg.sender, amount);
 
         // update asset and insurance token balances
-        StorageLib.updateAssetBalance(msg.sender, StorageLib.getAssetBalance(msg.sender).add(assetTokens));
-        StorageLib.updateInsuranceBalance(msg.sender, StorageLib.getInsuranceBalance(msg.sender).add(insuranceTokens));
-
+        _addToBalances(msg.sender, amount);
+        
         emit Mint(amount, msg.sender);
 
         return amount;
@@ -135,11 +134,8 @@ contract SaveToken is ERC20, Pausable {
         super.transfer(recipient, amount);
 
         // update asset and insurance token balances
-        StorageLib.updateAssetBalance(msg.sender, StorageLib.getAssetBalance(msg.sender).sub(amount));
-        StorageLib.updateInsuranceBalance(msg.sender, StorageLib.getInsuranceBalance(msg.sender).sub(amount));
-
-        StorageLib.updateAssetBalance(recipient, StorageLib.getAssetBalance(recipient).add(amount));
-        StorageLib.updateInsuranceBalance(recipient, StorageLib.getInsuranceBalance(recipient).add(amount));
+        _subtractFromBalances(msg.sender, amount);
+        _addToBalances(recipient, amount);
 
         return true;
     }
@@ -170,11 +166,8 @@ contract SaveToken is ERC20, Pausable {
         super.transferFrom(sender, recipient, amount);
 
         // update asset and insurance token balances
-        StorageLib.updateAssetBalance(sender, StorageLib.getAssetBalance(sender).sub(amount));
-        StorageLib.updateInsuranceBalance(sender, StorageLib.getInsuranceBalance(sender).sub(amount));
-
-        StorageLib.updateAssetBalance(recipient, StorageLib.getAssetBalance(recipient).add(amount));
-        StorageLib.updateInsuranceBalance(recipient, StorageLib.getInsuranceBalance(recipient).add(amount));
+        _subtractFromBalances(sender, amount);
+        _addToBalances(recipient, amount);
 
         return true;
     }
@@ -199,8 +192,7 @@ contract SaveToken is ERC20, Pausable {
         require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
 
         // update asset and insurance token balances
-        StorageLib.updateAssetBalance(msg.sender, StorageLib.getAssetBalance(msg.sender).sub(amount));
-        StorageLib.updateInsuranceBalance(msg.sender, StorageLib.getInsuranceBalance(msg.sender).sub(amount));
+        _subtractFromBalances(msg.sender, amount);
 
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
@@ -255,6 +247,16 @@ contract SaveToken is ERC20, Pausable {
     /***************
     INTERNAL FUNCTIONS
     ***************/
+    function _addToBalances(address user, uint256 amount) internal {
+        StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).add(amount));
+        StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).add(amount));
+    }
+
+    function _subtractFromBalances(address user, uint256 amount) internal {
+        StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).sub(amount));
+        StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).sub(amount)); 
+    }
+
     function _delegatecall(address adapterAddress, bytes memory sig)
         internal
         returns (uint256)
