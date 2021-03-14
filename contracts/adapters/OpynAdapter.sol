@@ -102,11 +102,11 @@ contract OpynAdapter is IInsurance {
         returns 
         (IUniswapExchange) 
         {
-        address uniswapFactoryAddress = StorageLib.uniswapFactory();
-        IUniswapFactory uniswapFactory = IUniswapFactory(uniswapFactoryAddress);
+        address uniswapFactoryAddress = StorageLib.exchangeFactory();
+        IUniswapFactory exchangeFactory = IUniswapFactory(uniswapFactoryAddress);
 
         IUniswapExchange exchange = IUniswapExchange(
-            uniswapFactory.getExchange(address(_tokenAddress))
+            exchangeFactory.getExchange(address(_tokenAddress))
         );
         return exchange;
     }
