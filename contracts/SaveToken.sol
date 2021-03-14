@@ -111,8 +111,8 @@ contract SaveToken is ERC20Extended, Pausable {
         uint256 assetTokens = _delegatecall(StorageLib.assetAdapter(), signature_hold);
         uint256 insuranceTokens = _delegatecall(StorageLib.insuranceAdapter(), signature_buy);
 
-        require(assetTokens == amount, "assetTokens must equal amount");
-        require(insuranceTokens == amount, "insuranceTokens must equal amount");
+        // require(assetTokens == amount, "assetTokens must equal amount");
+        // require(insuranceTokens == amount, "insuranceTokens must equal amount");
 
         _mint(msg.sender, amount);
 
