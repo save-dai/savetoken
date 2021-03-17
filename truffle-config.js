@@ -23,7 +23,7 @@ module.exports = {
     },
     mainnet: {
       networkCheckTimeout: 100000,
-      provider: () => new HDWalletProvider(mnemonic, 'https://mainnet.infura.io/v3/937291f44721429e8355a40325549eef'),
+      provider: () => new HDWalletProvider(mnemonic, `https://mainnet.infura.io/v3/${projectId}`),
       network_id: '2',       // Mainnet id
       chain_id: 1,
       gas: 8000000,
