@@ -11,10 +11,10 @@ import "./interfaces/ISaveToken.sol";
 import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
-import "./token/ERC20.sol";
+import "./token/ERC20Extended.sol";
 import "./utils/Pausable.sol";
 
-contract SaveToken is ERC20, Pausable {
+contract SaveToken is ERC20Extended, Pausable {
     using SafeMath for uint256;
 
     /***************
@@ -25,6 +25,16 @@ contract SaveToken is ERC20, Pausable {
     event WithdrawReward(uint256 amount, address user);
     event RewardsBalance(uint256 amount, address user);
 
+    /*
+     * @param underlyingTokenAddress The underlying token address
+     * @param assetAdapter The address of the Asset adapter a token will use
+     * @param assetToken The addresses for the asset token
+     * @param insuranceAdapter The address of the Insurance adapter a token will use
+     * @param insuranceToken The addresses for the insurance token
+     * @param exchangeFactory The addresses for the exchange factory
+     * @param rewardsLogic The logic contract for the rewards farmer proxies
+     * @param admin The admin's address
+     */
     constructor(
         address underlyingTokenAddress,
         address assetAdapter,

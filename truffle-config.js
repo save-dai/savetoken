@@ -7,6 +7,7 @@ let mnemonic = '';
 if (fs.existsSync('./secrets.json')) {
   secrets = require('./secrets.json');
   mnemonic = secrets.mnemonic;
+  projectId = secrets.projectId;
 }
 
 module.exports = {

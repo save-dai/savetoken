@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../libraries/ERC20StorageLib.sol";
 
+import "./ERC20Metadata.sol";
 import "./ERC20Base.sol";
 
-contract ERC20Extended is ERC20Base {
+contract ERC20Extended is ERC20Base, ERC20Metadata {
     using SafeMath for uint256;
 
     function increaseAllowance(address spender, uint256 amount)

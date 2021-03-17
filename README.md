@@ -20,9 +20,9 @@ Find documention to integrate the SaveToken protocol [here](https://docs.savedai
 
 # Installation
 
-1. Run `git clone` to clone this repo.
-2. Run `cd savetoken` .
-3. Run `npm install` to install all dependencies.
+1. Run `git clone` to clone this repo
+2. Run `cd savetoken`
+3. Run `npm install` to install all dependencies
 
 # Testing and Deployment
 To run the tests, you will need to fork the Ethereum Mainnet and unlock the following accounts:
@@ -48,4 +48,4 @@ To run the tests, you will need to fork the Ethereum Mainnet and unlock the foll
 - TBD
 
 ## License
-The SaveToken protocol is under the [MIT License] (https://github.com/save-dai/savetoken/blob/master/LICENSE)
+The SaveToken protocol is under the [MIT License](https://github.com/save-dai/savetoken/blob/master/LICENSE)

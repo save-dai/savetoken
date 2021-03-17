@@ -18,7 +18,7 @@ const COMPFarmer = artifacts.require('COMPFarmer');
 const CompoundAdapter = artifacts.require('CompoundAdapter');
 const AaveAdapter = artifacts.require('AaveAdapter');
 const OpynAdapter = artifacts.require('OpynAdapter');
-const ERC20 = artifacts.require('ERC20');
+const IERC20 = artifacts.require('IERC20');
 const ICToken = artifacts.require('ICToken');
 const IAToken = artifacts.require('IAToken');
 const IOToken = artifacts.require('IOToken');
@@ -56,9 +56,9 @@ contract('SaveToken', async (accounts) => {
 
   before(async () => {
     // instantiate mock tokens
-    daiInstance = await ERC20.at(daiAddress);
-    usdcInstance = await ERC20.at(usdcAddress);
-    compInstance = await ERC20.at(compAddress);
+    daiInstance = await IERC20.at(daiAddress);
+    usdcInstance = await IERC20.at(usdcAddress);
+    compInstance = await IERC20.at(compAddress);
     ocDaiInstance = await IOToken.at(ocDaiAddress);
     cDaiInstance = await ICToken.at(cDaiAddress);
     aDaiInstance = await IAToken.at(aDaiAddress);

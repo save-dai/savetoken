@@ -12,6 +12,10 @@ contract SaveTokenFactory {
 
     event SaveTokenCreated(address addr);
 
+    /*
+     * @notice Constructor to set admin for the SaveToken contracts
+     * @param _admin The admin's address
+     */
     constructor(address _admin) {
         admin = _admin;
     }
@@ -23,7 +27,7 @@ contract SaveTokenFactory {
      * @param assetToken The addresses for the asset token
      * @param insuranceAdapter The address of the Insurance adapter a token will use
      * @param insuranceToken The addresses for the insurance token
-     * @param uniswapFactory The addresses for the Uniswap factory token
+     * @param exchangeFactory The addresses for the exchange factory
      * @param farmerAddress The addresses for the SaveToken farmer
      */
     function createSaveToken(
