@@ -1,6 +1,7 @@
 /* eslint-disable prefer-const */
 /* global contract artifacts web3 before it assert */
 const { expect } = require('chai');
+const Decimal = require('decimal.js');
 
 const {
   BN,
@@ -23,10 +24,11 @@ const IAToken = artifacts.require('IAToken');
 
 const IUniswapFactory = artifacts.require('IUniswapFactory');
 const IUniswapExchange = artifacts.require('IUniswapExchange');
+const IPool = artifacts.require('IBalancerPool');
+const verbose = process.env.VERBOSE;
 
 // mainnet addresses
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
-
 const balancerPool = '0xb9efee79155b4bd6d06dd1a4c8babde306960bab';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const aDaiAddress = '0x028171bCA77440897B824Ca71D1c56caC55b68A3';
@@ -39,16 +41,21 @@ contract('SaveToken', async (accounts) => {
   const recipient = accounts[4];
   const relayer = accounts[5];
 
+  const { toWei } = web3.utils;
+  const { fromWei } = web3.utils;
+  const errorDelta = 10 ** -8;
+
   const deadline = 1099511627776;
-  const amount = ether('100'); // 100 saveTokens
+  const amount = ether('150'); // 100 saveTokens
 
   before(async () => {
     // instantiate mock tokens
-    daiInstance = await ERC20.at(daiAddress);
-    aDaiInstance = await IAToken.at(aDaiAddress);
-    covADaiInstance = await ERC20.at(covADaiAddress);
+    dai = await ERC20.at(daiAddress);
+    aDai = await IAToken.at(aDaiAddress);
+    covADai = await ERC20.at(covADaiAddress);
 
     uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
+    bpool = await IPool.at(balancerPool);
     daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
     daiExchange = await IUniswapExchange.at(daiExchangeAddress);
 
@@ -79,8 +86,7 @@ contract('SaveToken', async (accounts) => {
       covADaiAddress,
       balancerPool,
       constants.ZERO_ADDRESS,
-      // TODO: Determine naming convention for SaveTokens
-      'SaveDAI_Aave',
+      'SaveDAI_Aave_Cover',
       'SDAT',
       18,
     );
@@ -88,10 +94,10 @@ contract('SaveToken', async (accounts) => {
     saveDaiAaveInstance = await SaveToken.at(saveDaiAaveAddress);
 
     // approve 1000 DAI
-    await daiInstance.approve(saveDaiAaveAddress, ether('1000'), { from: userWallet1 });
+    await dai.approve(saveDaiAaveAddress, toWei('1000'), { from: userWallet1 });
   });
   it('user wallet1 should have DAI balance', async () => {
-    const userWalletBalance = await daiInstance.balanceOf(userWallet1);
+    const userWalletBalance = await dai.balanceOf(userWallet1);
     expect(new BN(userWalletBalance)).to.be.bignumber.least(new BN(100));
   });
 
@@ -102,16 +108,30 @@ contract('SaveToken', async (accounts) => {
         // mint saveDAI tokens
         await expectRevert(saveDaiAaveInstance.mint(amount, { from: userWallet1 }), 'Pausable: paused');
       });
-      it.only('should mint SaveTokens', async () => {
+      it('should mint SaveTokens', async () => {
         await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
 
-        const covADaibalance = await covADaiInstance.balanceOf(saveDaiAaveAddress);
-        const aDAIbalance = await aDaiInstance.balanceOf(saveDaiAaveAddress);
+        const covADaibalance = await covADai.balanceOf(saveDaiAaveAddress);
+        const aDAIbalance = await aDai.balanceOf(saveDaiAaveAddress);
         const saveDaiAaveMinted = await saveDaiAaveInstance.balanceOf(userWallet1);
 
-        console.log(covADaibalance.toString());
-        console.log(aDAIbalance.toString());
-        console.log(saveDaiAaveMinted.toString());
+        const actual = fromWei(covADaibalance);
+        const expected = fromWei(saveDaiAaveMinted);
+
+        function calcRelativeDiff (expected, actual) {
+          return ((Decimal(expected).minus(Decimal(actual))).div(expected)).abs();
+        }
+        const relDif = calcRelativeDiff(expected, actual);
+
+        if (verbose) {
+          console.log('mint');
+          console.log(`covADaibalance : ${covADaibalance.toString()}`);
+          console.log(`aDAIbalance : ${aDAIbalance.toString()}`);
+          console.log(`saveDaiAaveMinted : ${saveDaiAaveMinted.toString()}`);
+          console.log(`relDif : ${relDif})`);
+        }
+
+        assert.isAtMost(relDif.toNumber(), errorDelta);
 
         // all token balances should match
         // assert.equal(aDAIbalance.toString(), amount);
@@ -119,23 +139,40 @@ contract('SaveToken', async (accounts) => {
         // assert.equal(saveDaiAaveMinted.toString(), amount);
       });
       it('should decrease userWallet DAI balance', async () => {
-        const initialDaiBalance = await daiInstance.balanceOf(userWallet1);
+        // Step 1. Get initial balance
+        const initialBalance = await dai.balanceOf(userWallet1);
 
+        // Step 2. Calculate how much DAI is needed for asset
         let assetCost = amount;
         assetCost = new BN(assetCost.toString());
 
-        const ethToPay = await ocDaiExchange.getEthToTokenOutputPrice(amount);
-        const insuranceCost = await daiExchange.getTokenToEthOutputPrice(ethToPay);
+        // Step 3. Calculate how much DAI is needed for insurance
+        const tokenBalanceIn = await bpool.getBalance(daiAddress);
+        const tokenWeightIn = await bpool.getDenormalizedWeight(daiAddress);
+        const tokenBalanceOut = await bpool.getBalance(covADaiAddress);
+        const tokenWeightOut = await bpool.getDenormalizedWeight(covADaiAddress);
+        const swapFee = await bpool.getSwapFee();
 
+        const insuranceCost = await bpool.calcInGivenOut(
+          tokenBalanceIn,
+          tokenWeightIn,
+          tokenBalanceOut,
+          tokenWeightOut,
+          amount,
+          swapFee,
+        );
+
+        // Step 4. Add together for total DAI cost
         const totalDaiCost = assetCost.add(insuranceCost);
 
+        // Step 5. mint saveDAI
         await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
 
-        const finalDaiBalance = await daiInstance.balanceOf(userWallet1);
+        // Step 6. Get ending balance
+        const endingBalance = await dai.balanceOf(userWallet1);
 
-        const diff = initialDaiBalance.sub(finalDaiBalance);
-
-        assert.equal(totalDaiCost.toString(), diff.toString());
+        const diff = initialBalance.sub(endingBalance);
+        assert.equal(totalDaiCost.toString().substring(0, 6), diff.toString().substring(0, 6));
       });
       it('should increase the user\'s assetTokens and insuranceTokens balances', async () => {
         await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
@@ -143,8 +180,8 @@ contract('SaveToken', async (accounts) => {
         const assetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
         const insuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
-        assert.equal(assetBalance, amount);
-        assert.equal(insuranceBalance, amount);
+        const diff = insuranceBalance.sub(assetBalance);
+        assert.isAtMost(diff.toNumber(), errorDelta);
       });
       it('should emit the amount of tokens minted', async () => {
         const receipt = await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
@@ -305,7 +342,7 @@ contract('SaveToken', async (accounts) => {
       });
       it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
         // identify initial balances
-        const aDAIbalanceInitial = await aDaiInstance.balanceOf(saveDaiAaveAddress);
+        const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
         const ocDAIbalanceInitial = await ocDaiInstance.balanceOf(saveDaiAaveAddress);
         // all token balances should match
         assert.equal(aDAIbalanceInitial.toString(), amount);
@@ -315,7 +352,7 @@ contract('SaveToken', async (accounts) => {
         await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
         // identify final balances
-        const aDAIbalanceFinal = await aDaiInstance.balanceOf(saveDaiAaveAddress);
+        const aDAIbalanceFinal = await aDai.balanceOf(saveDaiAaveAddress);
         const ocDAIbalanceFinal = await ocDaiInstance.balanceOf(saveDaiAaveAddress);
 
         diffInaDai = aDAIbalanceInitial.sub(aDAIbalanceFinal);
@@ -335,7 +372,7 @@ contract('SaveToken', async (accounts) => {
         daiAmount = daiAmount.toNumber();
 
         // idenitfy the user's initialUnderlyingBalance
-        initialUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
+        initialUnderlyingBalance = await dai.balanceOf(userWallet1);
 
         // calculate ocDAI for DAI on uniswap
         const eth = await ocDaiExchange.getTokenToEthInputPrice(daiAmount);
@@ -348,7 +385,7 @@ contract('SaveToken', async (accounts) => {
         await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
         // idenitfy the user's updatedUnderlyingBalance
-        const updatedUnderlyingBalance = await daiInstance.balanceOf(userWallet1);
+        const updatedUnderlyingBalance = await dai.balanceOf(userWallet1);
         const diff = updatedUnderlyingBalance.sub(initialUnderlyingBalance);
 
         expired = await ocDaiInstance.hasExpired();
