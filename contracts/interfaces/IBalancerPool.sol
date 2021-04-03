@@ -24,6 +24,14 @@ interface IBalancerPool {
         uint maxPrice
     ) external returns (uint tokenAmountOut, uint spotPriceAfter);
 
+    function swapExactAmountOut(
+        address tokenIn,
+        uint maxAmountIn,
+        address tokenOut,
+        uint tokenAmountOut,
+        uint maxPrice
+    ) external returns (uint tokenAmountIn, uint spotPriceAfter);
+
     function calcOutGivenIn(
         uint tokenBalanceIn,
         uint tokenWeightIn,

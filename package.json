@@ -6,7 +6,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "truffle test --network mainlocal",
+    "test:verbose": "VERBOSE=true truffle test --network mainlocal",
     "lint": "npm run lint:js:fix && npm run lint:sol",
     "lint:nofix": "npm run lint:js && npm run lint:sol",
     "lint:js": "./node_modules/.bin/eslint .",
@@ -21,6 +22,7 @@
     "@openzeppelin/test-helpers": "^0.5.9",
     "@truffle/hdwallet-provider": "^1.2.0",
     "babel-eslint": "^10.1.0",
+    "decimal.js": "^10.2.1",
     "eslint": "^7.12.1",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-mocha": "^8.0.0"

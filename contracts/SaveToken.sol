@@ -111,13 +111,11 @@ contract SaveToken is ERC20Extended, Pausable {
         uint256 assetTokens = _delegatecall(StorageLib.assetAdapter(), signature_hold);
         uint256 insuranceTokens = _delegatecall(StorageLib.insuranceAdapter(), signature_buy);
 
-        // require(assetTokens == amount, "assetTokens must equal amount");
-        // require(insuranceTokens == amount, "insuranceTokens must equal amount");
-
         _mint(msg.sender, amount);
 
         // update asset and insurance token balances
-        _addToBalances(msg.sender, amount);
+        _addToAssetBalance(msg.sender, assetTokens);
+        _addToInsuranceBalance(msg.sender, insuranceTokens);
         
         emit Mint(amount, msg.sender);
 
@@ -145,7 +143,7 @@ contract SaveToken is ERC20Extended, Pausable {
 
         // update asset and insurance token balances
         _subtractFromBalances(msg.sender, amount);
-        _addToBalances(recipient, amount);
+        // _addToBalances(recipient, amount);
 
         return true;
     }
@@ -177,7 +175,7 @@ contract SaveToken is ERC20Extended, Pausable {
 
         // update asset and insurance token balances
         _subtractFromBalances(sender, amount);
-        _addToBalances(recipient, amount);
+        // _addToBalances(recipient, amount);
 
         return true;
     }
@@ -257,8 +255,11 @@ contract SaveToken is ERC20Extended, Pausable {
     /***************
     INTERNAL FUNCTIONS
     ***************/
-    function _addToBalances(address user, uint256 amount) internal {
+    function _addToAssetBalance(address user, uint256 amount) internal {
         StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).add(amount));
+    }
+
+    function _addToInsuranceBalance(address user, uint256 amount) internal {
         StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).add(amount));
     }
 
