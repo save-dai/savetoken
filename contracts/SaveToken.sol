@@ -114,8 +114,12 @@ contract SaveToken is ERC20Extended, Pausable {
         _mint(msg.sender, amount);
 
         // update asset and insurance token balances
-        _addToAssetBalance(msg.sender, assetTokens);
-        _addToInsuranceBalance(msg.sender, insuranceTokens);
+        StorageLib.updateAssetBalance(
+            msg.sender, StorageLib.getAssetBalance(msg.sender).add(assetTokens)
+        );
+        StorageLib.updateInsuranceBalance(
+            msg.sender, StorageLib.getInsuranceBalance(msg.sender).add(insuranceTokens)
+        );
         
         emit Mint(amount, msg.sender);
 
@@ -138,12 +142,14 @@ contract SaveToken is ERC20Extended, Pausable {
             _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
+        uint256 balance = super.balanceOf(msg.sender);
+        uint256 ratio = amount.div(balance);
+
         // transfer saveTokens
         super.transfer(recipient, amount);
 
-        // update asset and insurance token balances
-        _subtractFromBalances(msg.sender, amount);
-        // _addToBalances(recipient, amount);
+        // calculate and transfer asset and insurance tokens
+        _transferTokens(msg.sender, recipient, ratio);
 
         return true;
     }
@@ -170,12 +176,13 @@ contract SaveToken is ERC20Extended, Pausable {
             _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
+        uint256 balance = super.balanceOf(sender);
+        uint256 ratio = amount.div(balance);
+
         // transfer saveTokens
         super.transferFrom(sender, recipient, amount);
 
-        // update asset and insurance token balances
-        _subtractFromBalances(sender, amount);
-        // _addToBalances(recipient, amount);
+        _transferTokens(sender, recipient, ratio);
 
         return true;
     }
@@ -207,6 +214,17 @@ contract SaveToken is ERC20Extended, Pausable {
         _burn(msg.sender, amount);
     }
 
+    /// @notice This function will withdraw all reward tokens
+    /// @return amount Returns the amount of reward tokens withdrawn
+    function withdrawReward() external returns (uint256) {
+        bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
+
+        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
+
+        emit WithdrawReward(balance, msg.sender);
+        return balance;
+    }
+
     /// @notice Allows admin to pause contract
     function pause() external {
         require(StorageLib.admin() == msg.sender, "Caller must be admin");
@@ -217,17 +235,6 @@ contract SaveToken is ERC20Extended, Pausable {
     function unpause() external {
         require(StorageLib.admin() == msg.sender, "Caller must be admin");
         _unpause();
-    }
-
-    /// @notice This function will withdraw all reward tokens
-    /// @return amount Returns the amount of reward tokens withdrawn
-    function withdrawReward() external returns (uint256) {
-        bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
-
-        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
-
-        emit WithdrawReward(balance, msg.sender);
-        return balance;
     }
 
     /// @dev Returns the user's asset token balance
@@ -255,12 +262,32 @@ contract SaveToken is ERC20Extended, Pausable {
     /***************
     INTERNAL FUNCTIONS
     ***************/
-    function _addToAssetBalance(address user, uint256 amount) internal {
-        StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).add(amount));
-    }
 
-    function _addToInsuranceBalance(address user, uint256 amount) internal {
-        StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).add(amount));
+    function _transferTokens(        
+        address sender,
+        address recipient,
+        uint256 ratio)
+        internal 
+        {
+        
+        uint256 assetBalance = StorageLib.getAssetBalance(sender);
+        uint256 insuranceBalance = StorageLib.getInsuranceBalance(sender);
+
+        uint256 assetTransferAmount = ratio.mul(assetBalance);
+        uint256 insuranceTransferAmount = ratio.mul(insuranceBalance);
+
+        StorageLib.updateAssetBalance(
+            sender, assetBalance.sub(assetTransferAmount)
+        );
+        StorageLib.updateInsuranceBalance(
+            sender, insuranceBalance.sub(insuranceTransferAmount)
+        ); 
+        StorageLib.updateAssetBalance(
+            recipient, StorageLib.getAssetBalance(recipient).add(assetTransferAmount)
+        );
+        StorageLib.updateInsuranceBalance(
+            recipient, StorageLib.getInsuranceBalance(recipient).add(insuranceTransferAmount)
+        ); 
     }
 
     function _subtractFromBalances(address user, uint256 amount) internal {
