@@ -14,10 +14,10 @@ contract AaveAdapter is IAsset {
     using SafeMath for uint256;
 
     function hold(uint256 amount) 
-    	external
-    	override(IAsset) 
-    	returns (uint256) 
-    	{
+        external
+        override(IAsset) 
+        returns (uint256) 
+        {
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
         IAToken aToken = IAToken(StorageLib.assetToken());
 
@@ -40,20 +40,20 @@ contract AaveAdapter is IAsset {
     }
 
     function getCostOfAsset(uint256 amount) 
-    	external
+        external
         pure
-    	override(IAsset) 
-    	returns (uint256) 
-    	{
+        override(IAsset) 
+        returns (uint256) 
+        {
     	// aTokens at a 1:1 ratio with underlying tokens
-    	return amount;
+        return amount;
     }
 
     function withdraw(uint256 amount) 
-    	external 
-    	override(IAsset) 
-    	returns (uint256) 
-    	{
+    external 
+    override(IAsset) 
+    returns (uint256) 
+    {
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
         IAToken aToken = IAToken(StorageLib.assetToken());
 
@@ -75,11 +75,11 @@ contract AaveAdapter is IAsset {
     }
 
     function withdrawReward() 
-    	external
+        external
         pure
-    	override(IAsset) 
-    	returns (uint256) 
-    	{
+        override(IAsset) 
+        returns (uint256) 
+        {
         // no rewards yield w/ aTokens
         return 0; 
     }
@@ -95,10 +95,10 @@ contract AaveAdapter is IAsset {
     }
 
     function transfer(address recipient, uint256 amount) 
-    	external 
-    	override(IAsset) 
-    	returns (bool) 
-    	{
+        external 
+        override(IAsset) 
+        returns (bool) 
+        {
         // no rewards-farmer for assets; transfer handled in SaveToken contract
     }
 

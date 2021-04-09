@@ -3,18 +3,18 @@ pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-// import "../interfaces/IInsurance.sol";
+import "../interfaces/IInsurance.sol";
 import "../libraries/StorageLib.sol";
 import "../interfaces/IBalancerPool.sol";
 import "../interfaces/ICoverToken.sol";
 
-contract CoverAdapter {
+contract CoverAdapter is IInsurance {
     using SafeMath for uint256;
 
     function buyInsurance(uint256 amount) 
         external 
-        // override(IInsurance)
-        returns (uint256 x) 
+        override(IInsurance)
+        returns (uint256) 
         {   
         address covToken = StorageLib.insuranceToken();
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
@@ -23,39 +23,39 @@ contract CoverAdapter {
         // approve the transfer
         underlyingToken.approve(address(balancerPool), amount );
 
-        (x, ) =
-            balancerPool.swapExactAmountIn(
-                address(underlyingToken), // tokenIn
+        (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
+            address(underlyingToken), // tokenIn
+            amount, // tokenAmountIn
+            address(covToken), // tokenOut
+            1, // minAmountOut
+            type(uint256).max // maxPrice
+        );
+        return tokensOut;
+    }
+
+    function sellInsurance(uint256 amount) 
+        external 
+        override(IInsurance)
+        returns (uint256) 
+        {
+        address covToken = StorageLib.insuranceToken();
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
+        IBalancerPool balancerPool = IBalancerPool(StorageLib.exchangeFactory());
+
+        // approve the transfer
+        underlyingToken.approve(address(balancerPool), amount );
+
+        require(isActive(), "must not be expired");
+
+        (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
+                address(covToken), // tokenIn
                 amount, // tokenAmountIn
-                address(covToken), // tokenOut
+                address(underlyingToken), // tokenOut
                 1, // minAmountOut
                 type(uint256).max // maxPrice
             );
+        return tokensOut;
     }
-
-    // function sellInsurance(uint256 amount) 
-    //     external 
-    //     override(IInsurance)
-    //     returns (uint256) 
-    //     {
-    //     address underlyingToken = StorageLib.underlyingToken();
-    //     IERC20 ocToken = IERC20(StorageLib.insuranceToken());
-    //     IUniswapExchange ocDaiExchange = _getExchange(StorageLib.insuranceToken());
-
-    //     // gives uniswap exchange allowance to transfer ocDAI tokens
-    //     require(ocToken.approve(address(ocDaiExchange), amount));
-
-    //     uint256 underlyingTokens = isActive() ?
-    //         ocDaiExchange.tokenToTokenSwapInput (
-    //             amount, // tokens sold
-    //             1, // min_tokens_bought
-    //             1, // min eth bought
-    //             1099511627776, // deadline
-    //             address(underlyingToken) // token address
-    //         )
-    //     : 0;
-    //     return underlyingTokens;
-    // }
 
     /// @notice This function calculates the premiums to be paid if a buyer wants to
     /// buy covTokens on Balancer
@@ -63,7 +63,7 @@ contract CoverAdapter {
     function getCostOfInsurance(uint256 amount)
         external
         view
-        // override(IInsurance)
+        override(IInsurance)
         returns (uint256)
         {
         address covToken = StorageLib.insuranceToken();
@@ -91,7 +91,7 @@ contract CoverAdapter {
     function isActive() 
         public 
         view
-        // override(IInsurance) 
+        override(IInsurance) 
         returns (bool) 
         {
         ICoverToken covToken = ICoverToken(StorageLib.insuranceToken());
