@@ -1,7 +1,11 @@
 /* eslint-disable prefer-const */
 /* global contract artifacts web3 before it assert */
 const { expect } = require('chai');
-const Decimal = require('decimal.js');
+
+const {
+  calcRelativeDiff,
+  getDAI,
+} = require('./utils.js');
 
 const {
   BN,
@@ -17,16 +21,12 @@ const SaveToken = artifacts.require('SaveToken');
 const AaveAdapter = artifacts.require('AaveAdapter');
 const CoverAdapter = artifacts.require('CoverAdapter');
 
-const ERC20 = artifacts.require('ERC20');
+const IERC20 = artifacts.require('IERC20');
 const IAToken = artifacts.require('IAToken');
 
-const IUniswapFactory = artifacts.require('IUniswapFactory');
-const IUniswapExchange = artifacts.require('IUniswapExchange');
 const IPool = artifacts.require('IBalancerPool');
-const verbose = process.env.VERBOSE;
 
 // mainnet addresses
-const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const balancerPool = '0xb9efee79155b4bd6d06dd1a4c8babde306960bab';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const aDaiAddress = '0x028171bCA77440897B824Ca71D1c56caC55b68A3';
@@ -40,30 +40,19 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
   const recipient = accounts[3];
   const relayer = accounts[4];
 
-  // const { ether } = web3.utils;
-  const { fromWei } = web3.utils;
   const errorDelta = 10 ** -8;
-
-  const deadline = 1099511627776;
   const amount = ether('150'); // 150 saveTokens
 
   before(async () => {
     // instantiate mock tokens
-    dai = await ERC20.at(daiAddress);
+    dai = await IERC20.at(daiAddress);
     aDai = await IAToken.at(aDaiAddress);
-    covADai = await ERC20.at(covADaiAddress);
+    covADai = await IERC20.at(covADaiAddress);
 
-    uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);
     bpool = await IPool.at(balancerPool);
-    daiExchangeAddress = await uniswapFactory.getExchange(daiAddress);
-    daiExchange = await IUniswapExchange.at(daiExchangeAddress);
 
     // swap ETH for DAI
-    await daiExchange.ethToTokenSwapInput(
-      1,
-      deadline,
-      { from: userWallet1, value: ether('50') },
-    );
+    await getDAI(userWallet1);
   });
 
   beforeEach(async () => {
@@ -85,8 +74,8 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       covADaiAddress,
       balancerPool,
       constants.ZERO_ADDRESS,
-      'SaveDAI_Aave_Cover',
-      'SDAT',
+      'SaveDAI_Aave_Cover_053121',
+      'SDAC_053121',
       18,
     );
     saveDaiAaveAddress = saveToken.logs[0].args.addr;
@@ -113,23 +102,8 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       const aDAIbalance = await aDai.balanceOf(saveDaiAaveAddress);
       const saveDaiAaveMinted = await saveDaiAaveInstance.balanceOf(userWallet1);
 
-      const actual = fromWei(covADaibalance);
-      const expected = fromWei(saveDaiAaveMinted);
-
-      function calcRelativeDiff (expected, actual) {
-        return ((Decimal(expected).minus(Decimal(actual))).div(expected)).abs();
-      }
-      const relDif = calcRelativeDiff(expected, actual);
-
-      if (verbose) {
-        console.log('mint');
-        console.log(`covADaibalance : ${covADaibalance.toString()}`);
-        console.log(`aDAIbalance : ${aDAIbalance.toString()}`);
-        console.log(`saveDaiAaveMinted : ${saveDaiAaveMinted.toString()}`);
-        console.log(`relDif : ${relDif})`);
-      }
-
       // saveDAI and aDAI should match. covADai off due to rounding.
+      const relDif = calcRelativeDiff(covADaibalance, saveDaiAaveMinted);
       assert.isAtMost(relDif.toNumber(), errorDelta);
       assert.equal(aDAIbalance.toString(), amount);
       assert.equal(saveDaiAaveMinted.toString(), amount);
@@ -168,7 +142,10 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       const endingBalance = await dai.balanceOf(userWallet1);
 
       const diff = initialBalance.sub(endingBalance);
-      assert.equal(totalDaiCost.toString().substring(0, 6), diff.toString().substring(0, 6));
+
+      // total DAI cost and diff in balanc are off due to rounding
+      const relDif = calcRelativeDiff(totalDaiCost, diff);
+      assert.isAtMost(relDif.toNumber(), errorDelta);
     });
     it('should increase the user\'s assetTokens and insuranceTokens balances', async () => {
       await saveDaiAaveInstance.mint(amount, { from: userWallet1 });

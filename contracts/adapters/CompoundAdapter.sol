@@ -7,8 +7,8 @@ import "../rewards-farmer/FarmerFactory.sol";
 import "../rewards-farmer/COMPFarmer.sol";
 import "../libraries/RewardsLib.sol";
 import "../libraries/StorageLib.sol";
+import "../interfaces/external/ICToken.sol";
 import "../interfaces/IAsset.sol";
-import "../interfaces/ICToken.sol";
 
 contract CompoundAdapter is IAsset, FarmerFactory {
     using SafeMath for uint256;

@@ -2,11 +2,11 @@
 pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../interfaces/external/IUniswapExchange.sol";
+import "../interfaces/external/IUniswapFactory.sol";
+import "../interfaces/external/IOToken.sol";
 import "../interfaces/IInsurance.sol";
 import "../libraries/StorageLib.sol";
-import "../interfaces/IUniswapExchange.sol";
-import "../interfaces/IUniswapFactory.sol";
-import "../interfaces/IOToken.sol";
 
 contract OpynAdapter is IInsurance {
 
