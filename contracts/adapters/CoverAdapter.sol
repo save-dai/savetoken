@@ -3,10 +3,10 @@ pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../interfaces/IInsurance.sol";
 import "../libraries/StorageLib.sol";
-import "../interfaces/IBalancerPool.sol";
-import "../interfaces/ICoverToken.sol";
+import "../interfaces/external/IBalancerPool.sol";
+import "../interfaces/external/ICoverToken.sol";
+import "../interfaces/IInsurance.sol";
 
 contract CoverAdapter is IInsurance {
     using SafeMath for uint256;
@@ -23,6 +23,7 @@ contract CoverAdapter is IInsurance {
         // approve the transfer
         underlyingToken.approve(address(balancerPool), amount );
 
+        // solhint-disable-next-line
         (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
             address(underlyingToken), // tokenIn
             amount, // tokenAmountIn
@@ -47,6 +48,7 @@ contract CoverAdapter is IInsurance {
 
         require(isActive(), "must not be expired");
 
+        // solhint-disable-next-line
         (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
                 address(covToken), // tokenIn
                 amount, // tokenAmountIn

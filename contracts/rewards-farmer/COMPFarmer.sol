@@ -4,8 +4,8 @@ pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../interfaces/IComptrollerLens.sol";
-import "../interfaces/ICToken.sol";
+import "../interfaces/external/IComptrollerLens.sol";
+import "../interfaces/external/ICToken.sol";
 import "./Farmer.sol";
 
  /// @dev The COMPFarmer contract inherits from the base Farmer contract and
