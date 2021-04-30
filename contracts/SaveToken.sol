@@ -142,14 +142,12 @@ contract SaveToken is ERC20Extended, Pausable {
             _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
-        uint256 balance = super.balanceOf(msg.sender);
-        uint256 ratio = amount.div(balance);
+        // transfer asset and insurance tokens
+        _transferTokens(msg.sender, recipient, amount);
+
 
         // transfer saveTokens
         super.transfer(recipient, amount);
-
-        // calculate and transfer asset and insurance tokens
-        _transferTokens(msg.sender, recipient, ratio);
 
         return true;
     }
@@ -176,13 +174,11 @@ contract SaveToken is ERC20Extended, Pausable {
             _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
-        uint256 balance = super.balanceOf(sender);
-        uint256 ratio = amount.div(balance);
+        // transfer asset and insurance tokens
+        _transferTokens(sender, recipient, amount);
 
         // transfer saveTokens
         super.transferFrom(sender, recipient, amount);
-
-        _transferTokens(sender, recipient, ratio);
 
         return true;
     }
@@ -266,10 +262,18 @@ contract SaveToken is ERC20Extended, Pausable {
     function _transferTokens(        
         address sender,
         address recipient,
-        uint256 ratio)
+        uint256 amount
+        )
         internal 
         {
         
+        // calculate ratio of amount transferring, and multiply by asset and insurance token 
+        // balances to calculate how much to send. This is for the saveTokens that don't have a
+        // 1:1:1 mapping (saveToken:assetToken:insuranceToken)
+
+        uint256 balance = super.balanceOf(sender);
+        uint256 ratio = amount.div(balance);
+
         uint256 assetBalance = StorageLib.getAssetBalance(sender);
         uint256 insuranceBalance = StorageLib.getInsuranceBalance(sender);
 
