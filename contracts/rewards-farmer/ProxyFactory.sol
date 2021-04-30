@@ -13,7 +13,7 @@ contract ProxyFactory {
     /// @param _logic The address of the logic contract that the proxy points to.
     /// @param _data The encoded data necessary to make low-level call and deploy the farmer proxy.
     /// @return proxy Return the newly created farmer proxy's address.
-    function deployMinimal(address _logic, bytes memory _data) public returns (address proxy) {
+    function deployMinimal(address _logic, bytes memory _data) internal returns (address proxy) {
         bytes20 targetBytes = bytes20(_logic);
         assembly {
             let clone := mload(0x40)

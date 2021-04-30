@@ -51,4 +51,12 @@ contract MockInsurance is IInsurance {
         return amount;
     }
 
+    function claim(bytes memory data) 
+        external 
+        override(IInsurance)
+        returns (uint256) 
+        {
+
+    }
+
 }

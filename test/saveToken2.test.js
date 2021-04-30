@@ -14,6 +14,7 @@ const {
   constants,
   ether,
   time,
+  ZERO_ADDRESS,
 } = require('@openzeppelin/test-helpers');
 
 const SaveTokenFactory = artifacts.require('SaveTokenFactory');
@@ -26,6 +27,8 @@ const IERC20 = artifacts.require('IERC20');
 const IAToken = artifacts.require('IAToken');
 
 const IPool = artifacts.require('IBalancerPool');
+
+const IClaim = artifacts.require('IClaimManagement');
 
 // mainnet addresses
 const balancerPool = '0xb9efee79155b4bd6d06dd1a4c8babde306960bab';
@@ -157,6 +160,30 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       const receipt = await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
       const wallet = web3.utils.toChecksumAddress(userWallet1);
       expectEvent(receipt, 'Mint', { amount: amount, user: wallet });
+    });
+  });
+  describe('claim', function () {
+    beforeEach(async () => {
+      // Mint saveToken
+      await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
+    });
+    it('should file claim', async () => {
+      const claimAddress = '0xd33F2e0173Fd0aE2A64B208A7BD16bcdc68bC862';
+      const AAVEprotocol = '0x1246c212C68e44eDEDbd802ce43de38745c817C0'; // ADAI
+      const protocolName = '0x4141564500000000000000000000000000000000000000000000000000000000'; //AAVE
+      const fee = ether('50'); //50 DAI
+      const incidentTimestamp = (await time.latest()).sub(time.duration.hours(12));
+
+      const bytes = web3.eth.abi.encodeParameters(
+        ['address', 'address', 'bytes32', 'uint48', 'uint256'],
+        [claimAddress, AAVEprotocol, protocolName, incidentTimestamp, fee],
+      );
+
+      const receipt = await saveDaiAaveInstance.claim(bytes, { from: userWallet1 });
+      const emittedEvent = receipt.receipt.rawLogs[3].topics[0];
+      const eventName = web3.eth.abi.encodeEventSignature('ClaimFiled(bool,address,address,uint48,uint256,uint256,uint256)');
+
+      assert.equal(eventName, emittedEvent);
     });
   });
   describe('transfer', function () {

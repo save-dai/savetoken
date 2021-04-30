@@ -10,6 +10,7 @@ import "./libraries/StorageLib.sol";
 import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
+import "./interfaces/external/IClaimManagement.sol";
 import "./token/ERC20Extended.sol";
 import "./utils/Pausable.sol";
 
@@ -23,13 +24,14 @@ contract SaveToken is ERC20Extended, Pausable {
     event WithdrawForUnderlyingAsset(uint256 amount, address user);
     event WithdrawAll(uint256 amount, address user);
     event WithdrawReward(uint256 amount, address user);
+    event Claimed();
 
-      /// @dev Throws if msg.sender has no SaveTokens
-      modifier onlySavers() {
+    /// @dev Throws if msg.sender has no SaveTokens
+    modifier onlySavers() {
         require(super.balanceOf(msg.sender) > 0, 
             "Balance must be greater than 0");
         _;
-      }
+    }
 
     /*
      * @param underlyingTokenAddress The underlying token address
@@ -187,6 +189,21 @@ contract SaveToken is ERC20Extended, Pausable {
         super.transferFrom(sender, recipient, amount);
 
         return true;
+    }
+
+    /// @notice Allows user to exercise their insurance
+    /// @param data custom bytes
+    function claim(bytes memory data) external {
+
+        bytes memory signature_claim = abi.encodeWithSignature(
+            "claim(bytes)",
+            data
+        );
+
+        _delegatecall(StorageLib.insuranceAdapter(), signature_claim);
+
+        emit Claimed();
+
     }
 
     /// @notice This function will unbundle your SaveTokens for your underlying asset
