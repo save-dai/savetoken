@@ -32,6 +32,16 @@ contract OpynAdapter is IInsurance {
             );
     }
 
+    function claim(bytes memory data)
+        external
+        pure
+        override(IInsurance)
+        returns (uint256)
+        {
+        data = '0';
+        return 0;
+    }
+
     function sellInsurance(uint256 amount) 
         external 
         override(IInsurance)

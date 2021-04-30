@@ -117,6 +117,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const receipt = await saveDaiInstance.mint(amount, { from: userWallet1 });
 
       const event = await expectEvent.inTransaction(receipt.tx, CompoundAdapter, 'ProxyCreated');
+
       const proxyAddress = event.args[0];
 
       const ocDAIbalance = await ocDai.balanceOf(saveDaiAddress);

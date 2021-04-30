@@ -28,7 +28,7 @@ const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const aDaiAddress = '0x028171bCA77440897B824Ca71D1c56caC55b68A3';
 
 // MOCKINSURANCE AAVE TOKEN
-contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts) => {
+contract('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts) => {
   const owner = accounts[0];
   const userWallet1 = accounts[1];
   const nonUserWallet = accounts[2];
