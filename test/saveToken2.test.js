@@ -62,10 +62,6 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
     aaveAdapter = await AaveAdapter.new();
     coverAdapter = await CoverAdapter.new();
 
-    aaveAdapterInstance = await AaveAdapter.at(aaveAdapter.address);
-    coverAdapterInstance = await CoverAdapter.at(coverAdapter.address);
-
-
     saveToken = await saveTokenFactory.createSaveToken(
       daiAddress,
       aaveAdapter.address,
@@ -360,7 +356,7 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
     });
 
   });
-  describe.skip('withdrawForUnderlyingAsset', function () {
+  describe('withdrawForUnderlyingAsset', function () {
     beforeEach(async () => {
       // Mint saveToken
       await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
@@ -369,7 +365,32 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       await expectRevert(saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
         'must successfully execute delegatecall');
     });
-    it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+    it.only('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+      // identify initial balances
+      const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
+      const covADaibalance = await covADai.balanceOf(saveDaiAaveAddress);
+      const daiBalance = await dai.balanceOf(saveDaiAaveAddress);
+      const userWallet = await dai.balanceOf(userWallet1);
+
+      console.log('aDAIbalanceInitial: ' + aDAIbalanceInitial);
+      console.log('covADaibalance: ' + covADaibalance);
+      console.log('daiBalance: ' + daiBalance);
+      console.log('userWallet: ' + userWallet);
+
+      // unbundle userWallet1's SaveTokens
+      await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+
+      // identify initial balances
+      const aDAIbalanceInitial2 = await aDai.balanceOf(saveDaiAaveAddress);
+      const covADaibalance2 = await covADai.balanceOf(saveDaiAaveAddress);
+      const daiBalance2 = await dai.balanceOf(saveDaiAaveAddress);
+      const userWallet2 = await dai.balanceOf(userWallet1);
+
+      console.log('aDAIbalanceInitial2: ' + aDAIbalanceInitial2);
+      console.log('covADaibalance2: ' + covADaibalance2);
+      console.log('daiBalance2: ' + daiBalance2);
+      console.log('userWallet2: ' + userWallet2);
+      /*
       // identify initial balances
       const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
       const ocDAIbalanceInitial = await ocDaiInstance.balanceOf(saveDaiAaveAddress);
@@ -394,6 +415,7 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
         :
         assert.equal(diffInocDai.toString(), diffInocDai) &&
         assert.equal(diffInaDai.toString(), amount);
+      */
     });
     it('should send msg.sender the underlying asset', async () => {
       // dai already deposited
