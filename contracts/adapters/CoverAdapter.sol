@@ -21,7 +21,7 @@ contract CoverAdapter is IInsurance {
         IBalancerPool balancerPool = IBalancerPool(StorageLib.exchangeFactory());
 
         // approve the transfer
-        underlyingToken.approve(address(balancerPool), amount );
+        underlyingToken.approve(address(balancerPool), amount);
 
         // solhint-disable-next-line
         (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
@@ -39,23 +39,24 @@ contract CoverAdapter is IInsurance {
         override(IInsurance)
         returns (uint256) 
         {
-        address covToken = StorageLib.insuranceToken();
+        IERC20 covTokenInstance = IERC20(StorageLib.insuranceToken());
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
         IBalancerPool balancerPool = IBalancerPool(StorageLib.exchangeFactory());
 
         // approve the transfer
-        underlyingToken.approve(address(balancerPool), amount );
+        covTokenInstance.approve(address(balancerPool), amount);
 
-        require(isActive(), "must not be expired");
+        //TODO: Address whether or not insurnace has expired
+        //require(isActive(), "must not be expired");
 
         // solhint-disable-next-line
         (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
-                address(covToken), // tokenIn
-                amount, // tokenAmountIn
-                address(underlyingToken), // tokenOut
-                1, // minAmountOut
-                type(uint256).max // maxPrice
-            );
+            address(StorageLib.insuranceToken()), // tokenIn
+            amount, // tokenAmountIn
+            address(underlyingToken), // tokenOut
+            1, // minAmountOut
+            type(uint256).max // maxPrice
+        );
         return tokensOut;
     }
 
