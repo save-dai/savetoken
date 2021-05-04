@@ -186,14 +186,28 @@ contract SaveToken is ERC20Extended, Pausable {
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
     function withdrawForUnderlyingAsset(uint256 amount) external {
+        // calculate ratio of amount to withdraw, and multiply by asset and insurance token 
+        // balances to calculate how much to send. This is for the saveTokens that don't have a
+        // 1:1:1 mapping (saveToken:assetToken:insuranceToken)
+
+        // TODO: move ratio stuff to internal function - compbine w/ needs for _transferTokens
+        uint256 balance = super.balanceOf(msg.sender);
+        uint256 ratio = amount.div(balance);
+
+        uint256 assetBalance = StorageLib.getAssetBalance(msg.sender);
+        uint256 insuranceBalance = StorageLib.getInsuranceBalance(msg.sender);
+
+        uint256 assetWithdrawAmount = ratio.mul(assetBalance);
+        uint256 insuranceWithdrawAmount = ratio.mul(insuranceBalance);
+
         bytes memory signature_withdraw = abi.encodeWithSignature(
             "withdraw(uint256)",
-            amount
+            assetWithdrawAmount
         );
 
         bytes memory signature_sellInsurance = abi.encodeWithSignature(
             "sellInsurance(uint256)",
-            amount
+            insuranceWithdrawAmount
         );
 
         uint256 underlyingForAsset = _delegatecall(StorageLib.assetAdapter(), signature_withdraw);
@@ -296,7 +310,7 @@ contract SaveToken is ERC20Extended, Pausable {
 
     function _subtractFromBalances(address user, uint256 amount) internal {
         StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).sub(amount));
-        StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).sub(amount)); 
+        //StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).sub(amount)); 
     }
 
     function _delegatecall(address adapterAddress, bytes memory sig)

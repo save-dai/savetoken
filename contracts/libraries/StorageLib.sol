@@ -42,7 +42,7 @@ library StorageLib {
         address _assetToken,
         address _insuranceAdapter,
         address _insuranceToken,
-        address _uniswapFactory,
+        address _exchangeFactory,
         address _saveToken,
         address _admin
     ) internal {
@@ -52,7 +52,7 @@ library StorageLib {
         st.assetToken = _assetToken;
         st.insuranceAdapter = _insuranceAdapter;
         st.insuranceToken = _insuranceToken;
-        st.exchangeFactory = _uniswapFactory;
+        st.exchangeFactory = _exchangeFactory;
         st.saveToken = _saveToken;
         st.admin = _admin;
         st.underlyingInstance = IERC20(_underlyingToken);
@@ -100,8 +100,8 @@ library StorageLib {
         assetToken_ = saveTokenStorage().insuranceToken;
     }
 
-    function exchangeFactory() internal view returns (address uniswapFactory_) {
-        uniswapFactory_ = saveTokenStorage().exchangeFactory;
+    function exchangeFactory() internal view returns (address exchangeFactory_) {
+        exchangeFactory_ = saveTokenStorage().exchangeFactory;
     }
 
     function saveToken() internal view returns (address saveToken_) {
