@@ -46,8 +46,7 @@ contract CoverAdapter is IInsurance {
         // approve the transfer
         covTokenInstance.approve(address(balancerPool), amount);
 
-        //TODO: Address whether or not insurnace has expired
-        //require(isActive(), "must not be expired");
+        require(isActive() == true, "must not be expired");
 
         // solhint-disable-next-line
         (uint256 tokensOut,) = balancerPool.swapExactAmountIn(
@@ -92,12 +91,16 @@ contract CoverAdapter is IInsurance {
     /// @dev Check expiration status of insurance token
     /// @return Returns true if insurance token has NOT expired
     function isActive() 
-        public 
+        public
         view
         override(IInsurance) 
         returns (bool) 
         {
-        ICoverToken covToken = ICoverToken(StorageLib.insuranceToken());
+        //TODO: Cover is a bit unique in how these Cover contracts 
+        // (which are proxies that hold collateral and expiration date info)
+        // deploy CLAIM and NOCLAIM tokens associated with a paritical type of coverage (e.g., covADai)
+        // Not sure how we should handle for this function?
+        ICoverToken covToken = ICoverToken(0x8Ce9E9c8D6Ebb919cA7Db573737D7c4acdd904F8);
         return block.timestamp < covToken.expirationTimestamp();
     }
 

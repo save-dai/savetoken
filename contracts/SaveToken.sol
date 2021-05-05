@@ -186,19 +186,10 @@ contract SaveToken is ERC20Extended, Pausable {
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
     function withdrawForUnderlyingAsset(uint256 amount) external {
-        // calculate ratio of amount to withdraw, and multiply by asset and insurance token 
-        // balances to calculate how much to send. This is for the saveTokens that don't have a
-        // 1:1:1 mapping (saveToken:assetToken:insuranceToken)
+        require(super.balanceOf(msg.sender) > 0, "Balance must be greater than 0");
 
-        // TODO: move ratio stuff to internal function - compbine w/ needs for _transferTokens
-        uint256 balance = super.balanceOf(msg.sender);
-        uint256 ratio = amount.div(balance);
-
-        uint256 assetBalance = StorageLib.getAssetBalance(msg.sender);
-        uint256 insuranceBalance = StorageLib.getInsuranceBalance(msg.sender);
-
-        uint256 assetWithdrawAmount = ratio.mul(assetBalance);
-        uint256 insuranceWithdrawAmount = ratio.mul(insuranceBalance);
+        // calculate ratio of amounts for the saveTokens that don't have a 1:1:1 mapping
+        (,,uint256 assetWithdrawAmount, uint256 insuranceWithdrawAmount) = _calculateRatioAmounts(msg.sender, amount);
 
         bytes memory signature_withdraw = abi.encodeWithSignature(
             "withdraw(uint256)",
@@ -217,7 +208,7 @@ contract SaveToken is ERC20Extended, Pausable {
         require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
 
         // update asset and insurance token balances
-        _subtractFromBalances(msg.sender, amount);
+        _subtractFromBalances(msg.sender, assetWithdrawAmount, insuranceWithdrawAmount);
 
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
@@ -280,19 +271,13 @@ contract SaveToken is ERC20Extended, Pausable {
         )
         internal 
         {
-        
-        // calculate ratio of amount transferring, and multiply by asset and insurance token 
-        // balances to calculate how much to send. This is for the saveTokens that don't have a
-        // 1:1:1 mapping (saveToken:assetToken:insuranceToken)
-
-        uint256 balance = super.balanceOf(sender);
-        uint256 ratio = amount.div(balance);
-
-        uint256 assetBalance = StorageLib.getAssetBalance(sender);
-        uint256 insuranceBalance = StorageLib.getInsuranceBalance(sender);
-
-        uint256 assetTransferAmount = ratio.mul(assetBalance);
-        uint256 insuranceTransferAmount = ratio.mul(insuranceBalance);
+        // calculate ratio of amounts for the saveTokens that don't have a 1:1:1 mapping
+        (
+        uint256 assetBalance, 
+        uint256 insuranceBalance, 
+        uint256 assetTransferAmount,
+        uint256 insuranceTransferAmount) = _calculateRatioAmounts(sender, amount
+        );
 
         StorageLib.updateAssetBalance(
             sender, assetBalance.sub(assetTransferAmount)
@@ -308,9 +293,36 @@ contract SaveToken is ERC20Extended, Pausable {
         ); 
     }
 
-    function _subtractFromBalances(address user, uint256 amount) internal {
-        StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).sub(amount));
-        //StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).sub(amount)); 
+    function _subtractFromBalances(address user, uint256 assetAmount, uint256 insuranceAmount) 
+        internal 
+        {
+        
+        StorageLib.updateAssetBalance(
+            user, StorageLib.getAssetBalance(user).sub(assetAmount)
+        );
+        StorageLib.updateInsuranceBalance(
+            user, StorageLib.getInsuranceBalance(user).sub(insuranceAmount)
+        ); 
+    }
+
+    function _calculateRatioAmounts(address user, uint256 amount) 
+        internal
+        view
+        returns (uint256, uint256, uint256, uint256)
+        {
+        // calculate ratio of amounts, and multiply by asset and insurance token 
+        // balances. This is for the saveTokens that don't have a
+        // 1:1:1 mapping (saveToken:assetToken:insuranceToken)
+        uint256 balance = super.balanceOf(user);
+        uint256 ratio = amount.div(balance);
+
+        uint256 assetBalance = StorageLib.getAssetBalance(user);
+        uint256 insuranceBalance = StorageLib.getInsuranceBalance(user);
+
+        uint256 assetWithdrawAmount = ratio.mul(assetBalance);
+        uint256 insuranceWithdrawAmount = ratio.mul(insuranceBalance);
+
+        return (assetBalance, insuranceBalance, assetWithdrawAmount, insuranceWithdrawAmount);
     }
 
     function _delegatecall(address adapterAddress, bytes memory sig)
@@ -334,5 +346,4 @@ contract SaveToken is ERC20Extended, Pausable {
         require(success, "must successfully execute delegatecall");
         return ret;
     }
-    
 }
