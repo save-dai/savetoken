@@ -43,7 +43,7 @@ const lensAddress = web3.utils.toChecksumAddress('0xd513d22422a3062Bd342Ae374b4b
 const comptroller = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
 
 // OPYN COMPOUND TOKEN
-contract('SaveToken1: OPYN-COMPOUND', async (accounts) => {
+contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
   const owner = accounts[0];
   const userWallet1 = accounts[1];
   const nonUserWallet = accounts[2];
@@ -90,7 +90,7 @@ contract('SaveToken1: OPYN-COMPOUND', async (accounts) => {
       ocDaiAddress,
       uniswapFactoryAddress,
       compFarmer.address,
-      'SaveDAI_Compound_Opyn',
+      'SaveDAI_Compound_Opyn_Expires_31_Feb_2021',
       'SDCO',
       8,
     );
@@ -454,7 +454,7 @@ contract('SaveToken1: OPYN-COMPOUND', async (accounts) => {
     });
     it('revert if the user does not have enough SaveTokens to unbundle', async () => {
       await expectRevert(saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
-        'must successfully execute delegatecall');
+        'Balance must be greater than 0');
     });
     it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
       // identify initial balances

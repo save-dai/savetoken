@@ -33,7 +33,7 @@ const aDaiAddress = '0x028171bCA77440897B824Ca71D1c56caC55b68A3';
 const covADaiAddress = '0xD3866617F3DdC2953A969f831830b60F1603e14b';
 
 // COVER AAVE TOKEN
-contract('SaveToken2: COVER-AAVE', async (accounts) => {
+contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
   const owner = accounts[0];
   const userWallet1 = accounts[1];
   const nonUserWallet = accounts[2];
@@ -70,8 +70,8 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       covADaiAddress,
       balancerPool,
       constants.ZERO_ADDRESS,
-      'SaveDAI_Aave_Cover_053121',
-      'SDAC_053121',
+      'SaveDAI_Aave_Cover_Expires_31_May_2021',
+      'SaveDAI_MAY2021',
       18,
     );
     saveDaiAaveAddress = saveToken.logs[0].args.addr;
@@ -363,9 +363,9 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
     });
     it('revert if the user does not have enough SaveTokens to unbundle', async () => {
       await expectRevert(saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
-        'must successfully execute delegatecall');
+        'Balance must be greater than 0');
     });
-    it.only('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+    it.skip('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
       // identify initial balances
       const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
       const covADaibalance = await covADai.balanceOf(saveDaiAaveAddress);
@@ -390,6 +390,7 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       console.log('covADaibalance2: ' + covADaibalance2);
       console.log('daiBalance2: ' + daiBalance2);
       console.log('userWallet2: ' + userWallet2);
+
       /*
       // identify initial balances
       const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
@@ -417,7 +418,7 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
         assert.equal(diffInaDai.toString(), amount);
       */
     });
-    it('should send msg.sender the underlying asset', async () => {
+    it.skip('should send msg.sender the underlying asset', async () => {
       // dai already deposited
       daiAmount = await saveDaiAaveInstance.balanceOf(userWallet1);
       daiAmount = daiAmount.toNumber();
@@ -445,14 +446,14 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
         :
         assert.approximately(daiTotal, diff, 0.0000009);
     });
-    it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
+    it.skip('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
       // unbundle userWallet1's tokens
       const withdrawalReceipt = await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
       const wallet = web3.utils.toChecksumAddress(userWallet1);
       expectEvent(withdrawalReceipt, 'WithdrawForUnderlyingAsset', { amount: amount, user: wallet });
     });
-    it('should burn the amount of msg.sender\'s SaveTokens', async () => {
+    it.skip('should burn the amount of msg.sender\'s SaveTokens', async () => {
       const initialBalance = await saveDaiAaveInstance.balanceOf(userWallet1);
       // unbundle userWallet's SaveTokens
       await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
@@ -462,7 +463,7 @@ contract('SaveToken2: COVER-AAVE', async (accounts) => {
       const diff = initialBalance - finalBalance;
       assert.equal(diff, amount);
     });
-    it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+    it.skip('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
       const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
       const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
