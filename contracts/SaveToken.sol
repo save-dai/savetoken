@@ -201,11 +201,20 @@ contract SaveToken is ERC20Extended, Pausable {
             insuranceWithdrawAmount
         );
 
-        uint256 underlyingForAsset = _delegatecall(StorageLib.assetAdapter(), signature_withdraw);
-        uint256 underlyingForInsurance = _delegatecall(StorageLib.insuranceAdapter(), signature_sellInsurance);
+        // initial underlying balance
+        uint256 initialUnderlyingBalance = StorageLib.underlyingInstance().balanceOf(address(this));
+
+        _delegatecall(StorageLib.assetAdapter(), signature_withdraw);
+        _delegatecall(StorageLib.insuranceAdapter(), signature_sellInsurance);
+
+        // updated underlying balance
+        uint256 updatedUnderlyingBalance = StorageLib.underlyingInstance().balanceOf(address(this));
+
+        // amount of the underlying to withdraw
+        uint256 underlyingToWithdraw = updatedUnderlyingBalance.sub(initialUnderlyingBalance);
 
         //transfer underlying to msg.sender
-        require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
+        require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingToWithdraw));
 
         // update asset and insurance token balances
         _subtractFromBalances(msg.sender, assetWithdrawAmount, insuranceWithdrawAmount);
@@ -221,6 +230,7 @@ contract SaveToken is ERC20Extended, Pausable {
         bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
 
         uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
+        require(balance > 0, 'rewards balance must be > 0');
 
         emit WithdrawReward(balance, msg.sender);
         return balance;
@@ -343,7 +353,6 @@ contract SaveToken is ERC20Extended, Pausable {
             )
             ret := mload(output)
         }
-        require(success, "must successfully execute delegatecall");
         return ret;
     }
 }
