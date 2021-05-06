@@ -554,7 +554,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const diff = initialBalance - finalBalance;
       assert.equal(diff, amount);
     });
-    it.skip('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+    it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
       const initialAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
       const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
@@ -567,8 +567,8 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const assetDiff = initialAssetBalance.sub(finalAssetBalance);
       const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
 
-      assert.equal(assetDiff, amount);
-      assert.equal(insuranceDiff, amount);
+      assert.equal(assetDiff.toString(), amount);
+      assert.equal(insuranceDiff.toString(), amount);
     });
   });
   describe('pause and unpause', function () {
@@ -591,7 +591,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
     });
     it('should revert if the transfer of rewards is unsuccessful', async () => {
       await expectRevert(saveDaiInstance.withdrawReward({ from: nonUserWallet }),
-        'must successfully execute delegatecall');
+        'rewards balance must be > 0');
     });
     it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
       const userCompBalance = await comp.balanceOf(userWallet1);
