@@ -44,15 +44,14 @@ contract OpynAdapter is IInsurance {
         // gives uniswap exchange allowance to transfer ocDAI tokens
         require(ocToken.approve(address(ocDaiExchange), amount));
 
-        uint256 underlyingTokens = isActive() ?
+        uint256 underlyingTokens = 
             ocDaiExchange.tokenToTokenSwapInput (
                 amount, // tokens sold
                 1, // min_tokens_bought
                 1, // min eth bought
                 1099511627776, // deadline
                 address(underlyingToken) // token address
-            )
-        : 0;
+            );
         return underlyingTokens;
     }
 
@@ -76,18 +75,6 @@ contract OpynAdapter is IInsurance {
 
         // get the amount of daiTokens that needs to be paid to get the desired ethToPay.
         return underlyingExchange.getTokenToEthOutputPrice(ethToPay);
-    }
-
-    /// @dev Check expiration status of insurance token
-    /// @return Returns true if insurance token has NOT expired
-    function isActive() 
-        public 
-        view
-        override(IInsurance) 
-        returns (bool) 
-        {
-        IOToken ocToken = IOToken(StorageLib.insuranceToken());
-        return !ocToken.hasExpired();
     }
 
     /***************
