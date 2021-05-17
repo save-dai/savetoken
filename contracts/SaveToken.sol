@@ -111,8 +111,6 @@ contract SaveToken is ERC20Extended, Pausable {
         uint256 assetTokens = _delegatecall(StorageLib.assetAdapter(), signature_hold);
         uint256 insuranceTokens = _delegatecall(StorageLib.insuranceAdapter(), signature_buy);
 
-        _mint(msg.sender, amount);
-
         // update asset and insurance token balances
         StorageLib.updateAssetBalance(
             msg.sender, StorageLib.getAssetBalance(msg.sender).add(assetTokens)
@@ -120,6 +118,8 @@ contract SaveToken is ERC20Extended, Pausable {
         StorageLib.updateInsuranceBalance(
             msg.sender, StorageLib.getInsuranceBalance(msg.sender).add(insuranceTokens)
         );
+        
+        _mint(msg.sender, amount);
         
         emit Mint(amount, msg.sender);
 
@@ -213,11 +213,16 @@ contract SaveToken is ERC20Extended, Pausable {
         // amount of the underlying to withdraw
         uint256 underlyingToWithdraw = updatedUnderlyingBalance.sub(initialUnderlyingBalance);
 
+        // update asset and insurance token balances
+        StorageLib.updateAssetBalance(
+            msg.sender, StorageLib.getAssetBalance(msg.sender).sub(assetWithdrawAmount)
+        );
+        StorageLib.updateInsuranceBalance(
+            msg.sender, StorageLib.getInsuranceBalance(msg.sender).sub(insuranceWithdrawAmount)
+        ); 
+
         //transfer underlying to msg.sender
         require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingToWithdraw));
-
-        // update asset and insurance token balances
-        _subtractFromBalances(msg.sender, assetWithdrawAmount, insuranceWithdrawAmount);
 
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
@@ -300,18 +305,6 @@ contract SaveToken is ERC20Extended, Pausable {
         );
         StorageLib.updateInsuranceBalance(
             recipient, StorageLib.getInsuranceBalance(recipient).add(insuranceTransferAmount)
-        ); 
-    }
-
-    function _subtractFromBalances(address user, uint256 assetAmount, uint256 insuranceAmount) 
-        internal 
-        {
-        
-        StorageLib.updateAssetBalance(
-            user, StorageLib.getAssetBalance(user).sub(assetAmount)
-        );
-        StorageLib.updateInsuranceBalance(
-            user, StorageLib.getInsuranceBalance(user).sub(insuranceAmount)
         ); 
     }
 
