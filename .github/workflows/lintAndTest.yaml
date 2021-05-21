@@ -30,6 +30,6 @@ jobs:
     - name: Compile
       run: truffle compile --all
     - name: Test
-      run: truffle test --network mainlocal
+      run: truffle test --network mainlocal test/saveToken2.test.js test/saveToken1.test.js test/SaveTokenFactory.test.js
       env:
         CI: true
