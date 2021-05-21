@@ -66,8 +66,7 @@ contract COMPFarmer is Farmer {
         return true;
     }
 
-    /// @dev Redeems the cToken asset token for DAI and withdraws
-    /// the rewards / governance tokens that have accrued.
+    /// @dev Redeems the cToken asset token for DAI
     /// @param amount The amount of cToken to redeem.
     /// @param user The address to send the DAI to.
     function redeem(uint256 amount, address user) external onlyOwner {
@@ -77,9 +76,6 @@ contract COMPFarmer is Farmer {
         // identify DAI balance and transfer
         uint256 daiBalance = underlying.balanceOf(address(this));
         require(underlying.transfer(user, daiBalance), "must transfer");
-
-        // withdraw reward
-        withdrawReward(user);
     }
 
     /// @dev Returns the COMP balance that has accured in the contract.
