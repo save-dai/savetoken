@@ -113,10 +113,10 @@ contract SaveToken is ERC20Extended, Pausable {
 
         // update asset and insurance token balances
         StorageLib.updateAssetBalance(
-            msg.sender, StorageLib.getAssetBalance(msg.sender).add(assetTokens)
+            msg.sender, getAssetBalance(msg.sender).add(assetTokens)
         );
         StorageLib.updateInsuranceBalance(
-            msg.sender, StorageLib.getInsuranceBalance(msg.sender).add(insuranceTokens)
+            msg.sender, getInsuranceBalance(msg.sender).add(insuranceTokens)
         );
         
         _mint(msg.sender, amount);
@@ -215,10 +215,10 @@ contract SaveToken is ERC20Extended, Pausable {
 
         // update asset and insurance token balances
         StorageLib.updateAssetBalance(
-            msg.sender, StorageLib.getAssetBalance(msg.sender).sub(assetWithdrawAmount)
+            msg.sender, getAssetBalance(msg.sender).sub(assetWithdrawAmount)
         );
         StorageLib.updateInsuranceBalance(
-            msg.sender, StorageLib.getInsuranceBalance(msg.sender).sub(insuranceWithdrawAmount)
+            msg.sender, getInsuranceBalance(msg.sender).sub(insuranceWithdrawAmount)
         ); 
 
         //transfer underlying to msg.sender
@@ -255,13 +255,13 @@ contract SaveToken is ERC20Extended, Pausable {
 
     /// @dev Returns the user's asset token balance
     /// @return Returns the asset balance
-    function getAssetBalance(address account) external view returns (uint256) {
+    function getAssetBalance(address account) public view returns (uint256) {
         return StorageLib.getAssetBalance(account);
     }
 
     /// @dev Returns the user's insurance token balance
     /// @return Returns the insurance balance
-    function getInsuranceBalance(address account) external view returns (uint256) {
+    function getInsuranceBalance(address account) public view returns (uint256) {
         return StorageLib.getInsuranceBalance(account);
     }
 
@@ -301,10 +301,10 @@ contract SaveToken is ERC20Extended, Pausable {
             sender, insuranceBalance.sub(insuranceTransferAmount)
         ); 
         StorageLib.updateAssetBalance(
-            recipient, StorageLib.getAssetBalance(recipient).add(assetTransferAmount)
+            recipient, getAssetBalance(recipient).add(assetTransferAmount)
         );
         StorageLib.updateInsuranceBalance(
-            recipient, StorageLib.getInsuranceBalance(recipient).add(insuranceTransferAmount)
+            recipient, getInsuranceBalance(recipient).add(insuranceTransferAmount)
         ); 
     }
 
@@ -319,8 +319,8 @@ contract SaveToken is ERC20Extended, Pausable {
         uint256 balance = super.balanceOf(user);
         uint256 ratio = amount.div(balance);
 
-        uint256 assetBalance = StorageLib.getAssetBalance(user);
-        uint256 insuranceBalance = StorageLib.getInsuranceBalance(user);
+        uint256 assetBalance = getAssetBalance(user);
+        uint256 insuranceBalance = getInsuranceBalance(user);
 
         uint256 assetWithdrawAmount = ratio.mul(assetBalance);
         uint256 insuranceWithdrawAmount = ratio.mul(insuranceBalance);
