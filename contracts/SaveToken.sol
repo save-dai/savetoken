@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/ERC20StorageLib.sol";
 import "./libraries/RewardsLib.sol";
 import "./libraries/StorageLib.sol";
-import "./interfaces/ISaveToken.sol";
 import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
@@ -22,8 +21,16 @@ contract SaveToken is ERC20Extended, Pausable {
     ***************/
     event Mint(uint256 amount, address user);
     event WithdrawForUnderlyingAsset(uint256 amount, address user);
+    event WithdrawAll(uint256 amount, address user);
     event WithdrawReward(uint256 amount, address user);
     event RewardsBalance(uint256 amount, address user);
+
+      /// @dev Throws if msg.sender has no SaveTokens
+      modifier onlySavers() {
+        require(super.balanceOf(msg.sender) > 0, 
+            "Balance must be greater than 0");
+        _;
+      }
 
     /*
      * @param underlyingTokenAddress The underlying token address
@@ -185,9 +192,7 @@ contract SaveToken is ERC20Extended, Pausable {
 
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
-    function withdrawForUnderlyingAsset(uint256 amount) external {
-        require(super.balanceOf(msg.sender) > 0, "Balance must be greater than 0");
-
+    function withdrawForUnderlyingAsset(uint256 amount) public onlySavers {
         // calculate ratio of amounts for the saveTokens that don't have a 1:1:1 mapping
         (,,uint256 assetWithdrawAmount, uint256 insuranceWithdrawAmount) = _calculateRatioAmounts(msg.sender, amount);
 
@@ -231,14 +236,25 @@ contract SaveToken is ERC20Extended, Pausable {
 
     /// @notice This function will withdraw all reward tokens
     /// @return amount Returns the amount of reward tokens withdrawn
-    function withdrawReward() external returns (uint256) {
+    function withdrawReward() public returns (uint256) {
         bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
 
         uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
-        require(balance > 0, 'rewards balance must be > 0');
 
         emit WithdrawReward(balance, msg.sender);
         return balance;
+    }
+
+    /// @notice This function will withdraw all underlying & reward tokens
+    function withdrawAll() external onlySavers {
+        uint256 balance = super.balanceOf(msg.sender);
+        // unbundle SaveTokens for all of your underlying assets
+        withdrawForUnderlyingAsset(balance);
+
+        // withdraw all reward tokens
+        withdrawReward();
+
+        emit WithdrawAll(balance, msg.sender);
     }
 
     /// @notice Allows admin to pause contract
