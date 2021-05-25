@@ -84,12 +84,14 @@ contract AaveAdapter is IAsset {
         return 0; 
     }
 
-    function getRewardsBalance() 
+    function getRewardsBalance(address account) 
         external
         pure
         override(IAsset) 
         returns (uint256) 
         {
+        // eliminate compilation error by asigning account a value
+        account = 0x0000000000000000000000000000000000000000;
         // no rewards yield w/ aTokens
         return 0; 
     }
