@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity >=0.6.0 <0.8.0;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -76,16 +77,6 @@ contract COMPFarmer is Farmer {
         // identify DAI balance and transfer
         uint256 daiBalance = underlying.balanceOf(address(this));
         require(underlying.transfer(user, daiBalance), "must transfer");
-    }
-
-    /// @dev Returns the COMP balance that has accured in the contract.
-    /// @return Returns the balance of COMP in the contract.
-    function getTotalCOMPEarned() external onlyOwner returns (uint256) {
-        IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
-        comptroller.claimComp(address(this));
-
-        uint256 balance = comp.balanceOf(address(this));
-        return balance;
     }
 
     /// @dev Allows user to withdraw the accrued COMP tokens at any time.
