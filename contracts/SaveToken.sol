@@ -23,7 +23,6 @@ contract SaveToken is ERC20Extended, Pausable {
     event WithdrawForUnderlyingAsset(uint256 amount, address user);
     event WithdrawAll(uint256 amount, address user);
     event WithdrawReward(uint256 amount, address user);
-    event RewardsBalance(uint256 amount, address user);
 
       /// @dev Throws if msg.sender has no SaveTokens
       modifier onlySavers() {
@@ -283,11 +282,14 @@ contract SaveToken is ERC20Extended, Pausable {
 
     /// @dev Returns the rewards token balance that has accured
     /// @return Returns the balance of rewards tokens
-    function getRewardsBalance() external returns (uint256) {
-        bytes memory signature_getRewardsBalance = abi.encodeWithSignature("getRewardsBalance()");
-        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_getRewardsBalance);
-        
-        emit RewardsBalance(balance, msg.sender);
+    function getRewardsBalance(address account) external view returns (uint256) {
+        bytes memory signature_getRewardsBalance = abi.encodeWithSignature(
+            "getRewardsBalance(address)",
+            account
+        );
+
+        uint256 balance = _staticcall(StorageLib.assetAdapter(), signature_getRewardsBalance);
+
         return balance;
     }
 
@@ -353,6 +355,28 @@ contract SaveToken is ERC20Extended, Pausable {
         assembly {
             let output := mload(0x40)
             success := delegatecall(
+                gas(),
+                adapterAddress,
+                add(sig, 32),
+                mload(sig),
+                output,
+                0x20
+            )
+            ret := mload(output)
+        }
+        return ret;
+    }
+
+    function _staticcall(address adapterAddress, bytes memory sig)
+        internal
+        view
+        returns (uint256)
+        {
+        uint256 ret;
+        bool success;
+        assembly {
+            let output := mload(0x40)
+            success := staticcall(
                 gas(),
                 adapterAddress,
                 add(sig, 32),
