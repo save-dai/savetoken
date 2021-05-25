@@ -30,6 +30,7 @@ const IOToken = artifacts.require('IOToken');
 
 const IUniswapFactory = artifacts.require('IUniswapFactory');
 const IUniswapExchange = artifacts.require('IUniswapExchange');
+const IComptrollerLens = artifacts.require('IComptrollerLens');
 const lensABI = require('./abi/lens.json'); // ABI for Compound's CErc20 Contract
 
 // mainnet addresses
@@ -40,7 +41,7 @@ const ocDaiAddress = '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33';
 
 const compAddress = web3.utils.toChecksumAddress('0xc00e94Cb662C3520282E6f5717214004A7f26888');
 const lensAddress = web3.utils.toChecksumAddress('0xd513d22422a3062Bd342Ae374b4b9c20E0a9a074');
-const comptroller = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
+const comptrollerAddress = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
 
 // OPYN COMPOUND TOKEN
 contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
@@ -80,6 +81,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
     compoundAdapterInstance = await CompoundAdapter.at(compoundAdapter.address);
     opynAdapterInstance = await OpynAdapter.at(opynAdapter.address);
 
+    comptrollerInstance = await IComptrollerLens.at(comptrollerAddress);
     lensContract = new web3.eth.Contract(lensABI, lensAddress);
 
     saveToken = await saveTokenFactory.createSaveToken(
@@ -511,7 +513,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const userCompBalance = await comp.balanceOf(userWallet1);
 
       const metaData1 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, userWallet1).call();
+        compAddress, comptrollerAddress, userWallet1).call();
       const metaDataBalance1 = metaData1[0];
 
       assert.equal(metaDataBalance1, userCompBalance);
@@ -523,7 +525,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const userCompBalance2 = await comp.balanceOf(userWallet1);
 
       const metaData2 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, userWallet1).call();
+        compAddress, comptrollerAddress, userWallet1).call();
       const metaDataBalance2 = metaData2[0];
 
       assert.equal(metaDataBalance2, userCompBalance2);
@@ -573,7 +575,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const userCompBalance = await comp.balanceOf(userWallet1);
 
       const metaData1 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, userWallet1).call();
+        compAddress, comptrollerAddress, userWallet1).call();
       const metaDataBalance1 = metaData1[0];
 
       assert.equal(metaDataBalance1, userCompBalance);
@@ -585,7 +587,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const userCompBalance2 = await comp.balanceOf(userWallet1);
 
       const metaData2 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, userWallet1).call();
+        compAddress, comptrollerAddress, userWallet1).call();
       const metaDataBalance2 = metaData2[0];
 
       assert.equal(metaDataBalance2, userCompBalance2);
@@ -669,7 +671,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const userCompBalance = await comp.balanceOf(userWallet1);
 
       const metaData1 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, userWallet1).call();
+        compAddress, comptrollerAddress, userWallet1).call();
       const metaDataBalance1 = metaData1[0];
 
       assert.equal(metaDataBalance1, userCompBalance);
@@ -681,7 +683,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const userCompBalance2 = await comp.balanceOf(userWallet1);
 
       const metaData2 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, userWallet1).call();
+        compAddress, comptrollerAddress, userWallet1).call();
       const metaDataBalance2 = metaData2[0];
 
       assert.equal(metaDataBalance2, userCompBalance2);
@@ -729,33 +731,12 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       proxyAddress = event.args[0];
     });
     it('should return total rewards balance that has yielded', async () => {
-      const initialCOMPBalance = await comp.balanceOf(proxyAddress);
+      // It isn't possible to get compAccrued on-chain w/ a view function
+      // To test returning arbitrary uint256 to comform to IAsset & test _staticcall
+      const mockCompBalance = 12345;
+      const rewardsBalance = await saveDaiInstance.getRewardsBalance(userWallet1);
 
-      await time.advanceBlock();
-
-      await saveDaiInstance.getRewardsBalance({ from: userWallet1 });
-
-      const metaData = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptroller, proxyAddress).call();
-      const metaDataBalance = metaData[0];
-
-      const finalCOMPBalance = await comp.balanceOf(proxyAddress);
-      diff = finalCOMPBalance.sub(initialCOMPBalance);
-
-      assert.equal(metaDataBalance, diff);
-    });
-    it('should emit a RewardsBalance event with the msg.sender\'s COMP balance in their proxy', async () => {
-      await time.advanceBlock();
-
-      const initialCOMPBalance = await comp.balanceOf(proxyAddress);
-
-      const rewardsReceipt = await saveDaiInstance.getRewardsBalance({ from: userWallet1 });
-
-      const finalCOMPBalance = await comp.balanceOf(proxyAddress);
-      diff = finalCOMPBalance.sub(initialCOMPBalance);
-
-      const wallet = web3.utils.toChecksumAddress(userWallet1);
-      expectEvent(rewardsReceipt, 'RewardsBalance', { amount: diff, user: wallet });
+      assert.equal(rewardsBalance, mockCompBalance);
     });
   });
 });
