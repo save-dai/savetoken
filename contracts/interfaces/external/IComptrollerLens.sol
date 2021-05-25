@@ -8,4 +8,5 @@ pragma solidity >=0.6.0 <0.8.0;
 
 interface IComptrollerLens {
     function claimComp(address) external;
+    function compAccrued(address) external view returns (uint);
 }
