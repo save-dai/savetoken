@@ -3,10 +3,12 @@ const fs = require('fs');
 
 let secrets;
 let mnemonic = '';
+let mnemonic2 = '';
 
 if (fs.existsSync('./secrets.json')) {
   secrets = require('./secrets.json');
   mnemonic = secrets.mnemonic;
+  mnemonic2 = secrets.mnemonic2; // hold Matic tokens
   projectId = secrets.projectId;
 }
 
@@ -32,6 +34,16 @@ module.exports = {
       timeoutBlocks: 2000,  // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true,    // Skip dry run before migrations? (default: false for public nets )
       gasPrice: 7000000000,  // 7 gwei (in wei) (default: 100 gwei)
+    },
+    //polygon Infura testnet
+    polygon_infura_testnet: {
+      provider: () => new HDWalletProvider(mnemonic2, `https://polygon-mumbai.infura.io/v3/${projectId}`),
+      network_id: 80001,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      chainId: 80001,
+      gasPrice: 0,
     },
   },
 
