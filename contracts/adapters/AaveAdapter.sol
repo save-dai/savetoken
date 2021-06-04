@@ -50,9 +50,9 @@ contract AaveAdapter is IAsset {
     }
 
     function withdraw(uint256 amount) 
-    external 
-    override(IAsset) 
-    returns (uint256) 
+        external 
+        override(IAsset) 
+        returns (uint256) 
     {
         IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
         IAToken aToken = IAToken(StorageLib.assetToken());

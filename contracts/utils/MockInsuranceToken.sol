@@ -15,4 +15,16 @@ contract MockInsuranceToken is ERC20 {
 
     }
 
+    function mint(address account, uint256 amount) public returns (uint256) {
+    	_mint(account, amount);
+
+    	return amount;
+    }
+
+    function burn(address account, uint256 amount) public returns (uint256) {
+    	_burn(account, amount);
+
+    	return amount;
+    }
+
 }

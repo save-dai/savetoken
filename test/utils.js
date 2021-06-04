@@ -7,12 +7,12 @@ const IUniswapExchange = artifacts.require('IUniswapExchange');
 const uniswapFactoryAddress = '0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95';
 const daiAddress = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 
+
 function calcRelativeDiff (expected, actual) {
   actual = fromWei(actual);
   expected = fromWei(expected);
   return ((Decimal(expected).minus(Decimal(actual))).div(expected)).abs();
 }
-
 
 async function getDAI (user) {
   uniswapFactory = await IUniswapFactory.at(uniswapFactoryAddress);

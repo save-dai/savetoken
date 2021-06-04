@@ -35,15 +35,39 @@ module.exports = {
       skipDryRun: true,    // Skip dry run before migrations? (default: false for public nets )
       gasPrice: 7000000000,  // 7 gwei (in wei) (default: 100 gwei)
     },
+    rinkeby: {
+      networkCheckTimeout: 100000,
+      provider: () => new HDWalletProvider(mnemonic2, `https://rinkeby.infura.io/v3/${projectId}`),
+      network_id: '4',
+      confirmations: 2,
+      timeoutBlocks: 50,
+      skipDryRun: true,
+      chainId: 80001,
+      gas: 1000000,
+      gasPrice: 7000000000,
+    },
+    ropsten: {
+      networkCheckTimeout: 100000,
+      provider: () => new HDWalletProvider(mnemonic2, `https://rinkeby.infura.io/v3/${projectId}`),
+      network_id: '4',
+      confirmations: 2,
+      timeoutBlocks: 50,
+      skipDryRun: true,
+      chainId: 80001,
+      gas: 1000000,
+      gasPrice: 7000000000,
+    },
     //polygon Infura testnet
     polygon_infura_testnet: {
+      networkCheckTimeout: 100000,
       provider: () => new HDWalletProvider(mnemonic2, `https://polygon-mumbai.infura.io/v3/${projectId}`),
       network_id: 80001,
       confirmations: 2,
-      timeoutBlocks: 200,
+      timeoutBlocks: 50,
       skipDryRun: true,
       chainId: 80001,
-      gasPrice: 0,
+      gas: 1000000,
+      gasPrice: 7000000000,
     },
   },
 

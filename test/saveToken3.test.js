@@ -1,10 +1,31 @@
+/* TESTS USING MATICJS */
+
 /* eslint-disable prefer-const */
 /* global contract artifacts web3 before it assert */
 const { expect } = require('chai');
 
-const {
-  getDAI,
-} = require('./utils.js');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+
+const fs = require('fs');
+
+let secrets;
+let mnemonic2 = '';
+let privateKey ='';
+
+if (fs.existsSync('./secrets.json')) {
+  secrets = require('./secrets.json');
+  mnemonic2 = secrets.mnemonic2; // hold Matic tokens
+  projectId = secrets.projectId;
+}
+
+const Matic = require('@maticnetwork/maticjs').MaticPOSClient;
+
+const maticPOSClient = new Matic({
+  parentProvider: new HDWalletProvider(privateKey, 'https://goerli.infura.io/v3/' + projectId),
+  maticProvider: new HDWalletProvider(privateKey, 'https://polygon-mumbai.infura.io/v3/' + projectId),
+  posRootChainManager: '0xBbD7cBFA79faee899Eaf900F13C9065bF03B1A74',
+  posEtherPredicate: '0xe2B01f3978c03D6DdA5aE36b2f3Ac0d66C54a6D5',
+});
 
 const {
   BN,
@@ -29,22 +50,23 @@ const mockInsuranceToken = '';
 
 // MOCKINSURANCE AAVE TOKEN
 contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts) => {
-	const owner = accounts[0];
-	const userWallet1 = accounts[1];
 
-    before(async () => {
-	    // instantiate mock tokens
-	    dai = await IERC20.at(daiAddress);
-	    aDai = await IAToken.at(aDaiAddress);
-	    // insuranceToken = await IERC20.at(mockInsuranceToken);
+  beforeEach(async () => {
+    // instantiate mock tokens
+    dai = await IERC20.at(daiAddress);
+    aDai = await IAToken.at(aDaiAddress);
+    // insuranceToken = await IERC20.at(mockInsuranceToken);
+  });
 
-	    // swap ETH for DAI
-	    //await getDAI(userWallet1);
-  	});
-
-    describe('', function () {
-	    it('', async () => {
-
-	    });
-    });
+  describe('testing', function () {
+	  it('testing', async () => {
+	    // Deposit ether into Matic chain using POS Portal.
+      // It is an ERC20 token on Matic chain
+      await maticPOSClient.depositEtherForUser(
+		    accounts[0], // User address (in most cases, this will be sender's address),
+		    100000, // Amount for deposit (in wei)
+        { from: accounts[0] },
+      );
+	  });
+  });
 });

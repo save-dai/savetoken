@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../libraries/StorageLib.sol";
 import "../../interfaces/IInsurance.sol";
+import "../../utils/MockInsuranceToken.sol";
 
 contract MockInsurance is IInsurance {
     using SafeMath for uint256;
@@ -14,7 +15,16 @@ contract MockInsurance is IInsurance {
         override(IInsurance)
         returns (uint256) 
         {       
+        address insuranceToken = StorageLib.insuranceToken();
+        MockInsuranceToken insuranceTokenInstance = MockInsuranceToken(insuranceToken);
+        IERC20 underlyingToken = IERC20(StorageLib.underlyingToken());
 
+        // approve the transfer
+        underlyingToken.approve(insuranceToken, amount);
+
+        uint256 tokensOut = insuranceTokenInstance.mint(address(this), amount);
+
+        return tokensOut;
     }
 
     function sellInsurance(uint256 amount) 
@@ -22,16 +32,23 @@ contract MockInsurance is IInsurance {
         override(IInsurance)
         returns (uint256) 
         {
+        address insuranceToken = StorageLib.insuranceToken();
+        MockInsuranceToken insuranceTokenInstance = MockInsuranceToken(insuranceToken);
 
+        // not selling mock insurance tokens for underlying
+
+        uint256 tokensOut = insuranceTokenInstance.burn(address(this), amount);
+
+        return tokensOut;
     }
 
     function getCostOfInsurance(uint256 amount)
         external
-        view
+        pure
         override(IInsurance)
         returns (uint256)
         {
-
+        return amount;
     }
 
 }
