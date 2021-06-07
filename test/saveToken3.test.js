@@ -2,6 +2,7 @@
 
 /* eslint-disable prefer-const */
 /* global contract artifacts web3 before it assert */
+/*
 const { expect } = require('chai');
 
 const HDWalletProvider = require('@truffle/hdwallet-provider');
@@ -9,12 +10,12 @@ const HDWalletProvider = require('@truffle/hdwallet-provider');
 const fs = require('fs');
 
 let secrets;
-let mnemonic2 = '';
+let mnemonic3 = '';
 let privateKey ='';
 
 if (fs.existsSync('./secrets.json')) {
   secrets = require('./secrets.json');
-  mnemonic2 = secrets.mnemonic2; // hold Matic tokens
+  mnemonic3 = secrets.mnemonic3; // hold Matic tokens
   projectId = secrets.projectId;
 }
 
@@ -49,7 +50,7 @@ const aDaiAddress = '0x639cB7b21ee2161DF9c882483C9D55c90c20Ca3e';
 const mockInsuranceToken = '';
 
 // MOCKINSURANCE AAVE TOKEN
-contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts) => {
+contract('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts) => {
 
   beforeEach(async () => {
     // instantiate mock tokens
@@ -60,6 +61,7 @@ contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts)
 
   describe('testing', function () {
 	  it('testing', async () => {
+      console.log('test');
 	    // Deposit ether into Matic chain using POS Portal.
       // It is an ERC20 token on Matic chain
       await maticPOSClient.depositEtherForUser(
@@ -70,3 +72,4 @@ contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts)
 	  });
   });
 });
+*/

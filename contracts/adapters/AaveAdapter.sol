@@ -3,7 +3,6 @@ pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../libraries/RewardsLib.sol";
 import "../libraries/StorageLib.sol";
 import "../interfaces/external/ILendingPoolAddressesProvider.sol";
 import "../interfaces/external/ILendingPool.sol";

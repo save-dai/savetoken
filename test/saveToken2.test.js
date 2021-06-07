@@ -13,6 +13,7 @@ const {
   expectEvent,
   constants,
   ether,
+  time,
 } = require('@openzeppelin/test-helpers');
 
 const SaveTokenFactory = artifacts.require('SaveTokenFactory');
@@ -410,7 +411,7 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
 
       finalUnderlyingBalance = await dai.balanceOf(userWallet1);
 
-      let diffInDai = finalUnderlyingBalance.sub(initialUnderlyingBalance) / 1e18;
+      let diffInDai = (finalUnderlyingBalance.sub(initialUnderlyingBalance)) / 1e18;
 
       assert.approximately(projectedDaiTotal, diffInDai, 0.4);
     });
@@ -441,15 +442,15 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       const finalAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
       const finalInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
-      const asserDiff = initialAssetBalance.sub(finalAssetBalance);
+      const assetDiff = initialAssetBalance.sub(finalAssetBalance);
       const insuranceDiff = initialInsuranceBalance.sub(finalInsuranceBalance);
 
-      assert.equal(asserDiff.toString(), amount.toString());
+      assert.equal(assetDiff.toString(), amount.toString());
 
       const relDif1 = calcRelativeDiff(amount, insuranceDiff);
       assert.isAtMost(relDif1.toNumber(), errorDelta);
 
-      const relDif2 = calcRelativeDiff(asserDiff, insuranceDiff);
+      const relDif2 = calcRelativeDiff(assetDiff, insuranceDiff);
       assert.isAtMost(relDif2.toNumber(), errorDelta);
     });
   });
@@ -508,7 +509,7 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       finalSaveDaiBlance = await saveDaiAaveInstance.balanceOf(userWallet1);
       finalUnderlyingBalance = await dai.balanceOf(userWallet1);
 
-      let diffInDai = finalUnderlyingBalance.sub(initialUnderlyingBalance) / 1e18;
+      let diffInDai = (finalUnderlyingBalance.sub(initialUnderlyingBalance)) / 1e18;
 
       assert.approximately(projectedDaiTotal, diffInDai, 0.4);
       assert.equal(finalSaveDaiBlance, 0);
