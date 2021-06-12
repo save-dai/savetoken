@@ -111,4 +111,12 @@ library StorageLib {
     function admin() internal view returns (address admin_) {
         admin_ = saveTokenStorage().admin;
     }
+
+    function getAddresses() 
+        internal 
+        view 
+        returns (address, address, address, address, address)
+        {
+        return (underlyingToken(), assetAdapter(), assetToken(), insuranceAdapter(), insuranceToken());
+    }
 }

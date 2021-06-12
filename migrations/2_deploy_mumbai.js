@@ -27,18 +27,18 @@ module.exports = function (deployer) {
     this.ERC20StorageLib = await deployer.deploy(ERC20StorageLib);
 
     await SaveToken.detectNetwork();
-	await SaveToken.link('StorageLib', this.StorageLib.address);
-	await SaveToken.link('ERC20StorageLib', this.ERC20StorageLib.address);
+	  await SaveToken.link('StorageLib', this.StorageLib.address);
+	  await SaveToken.link('ERC20StorageLib', this.ERC20StorageLib.address);
 
     await AaveAdapter.detectNetwork();
-	await AaveAdapter.link('StorageLib', this.StorageLib.address);
+	  await AaveAdapter.link('StorageLib', this.StorageLib.address);
 
     await MockInsuranceAdapter.detectNetwork();
-	await MockInsuranceAdapter.link('StorageLib', this.StorageLib.address);
+	  await MockInsuranceAdapter.link('StorageLib', this.StorageLib.address);
 
-	this.aaveAdapter = await deployer.deploy(AaveAdapter);
-	this.insuranceAdapter = await deployer.deploy(MockInsuranceAdapter);
-	this.insuranceToken = await deployer.deploy(MockInsuranceToken, insuranceTokenName, insuranceTokenSymbol);
+	  this.aaveAdapter = await deployer.deploy(AaveAdapter);
+	  this.insuranceAdapter = await deployer.deploy(MockInsuranceAdapter);
+	  this.insuranceToken = await deployer.deploy(MockInsuranceToken, insuranceTokenName, insuranceTokenSymbol);
 
     this.saveTokenFactory = await deployer.deploy(SaveTokenFactory, owner);
 
@@ -57,6 +57,8 @@ module.exports = function (deployer) {
     saveDaiAaveAddress = saveToken.logs[0].args.addr;
     saveDaiAaveInstance = await SaveToken.at(saveDaiAaveAddress);
 
+    console.log("StorageLib..............:", this.StorageLib.address.toString());
+    console.log("ERC20StorageLib.........:", this.ERC20StorageLib.address.toString());
     console.log("SaveTokenFactory........:", this.saveTokenFactory.address.toString());
     console.log("SaveToken...............:", saveDaiAaveAddress.toString());
     console.log("DAI Underlying..........:", daiAddress.toString());

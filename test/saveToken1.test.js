@@ -724,6 +724,21 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       );
     });
   });
+  describe('getAddresses', async function () {
+    it('should return the addresses for the underlyingToken, assetAdapter, assetToken. insuranceAdapter, insuranceToken', async () => {
+      const addresses = await saveDaiInstance.getAddresses();
+      const underlyingToken = addresses[0];
+      const assetAdapter = addresses[1];
+      const assetToken = addresses[2];
+      const insuranceAdapter = addresses[3];
+      const insuranceToken = addresses[4];
+      assert.equal(underlyingToken, daiAddress);
+      assert.equal(assetAdapter, compoundAdapter.address);
+      assert.equal(assetToken, cDaiAddress);
+      assert.equal(insuranceAdapter, opynAdapter.address);
+      assert.equal(insuranceToken, ocDaiAddress);
+    });
+  });
   describe('getRewardsBalance', async function () {
     beforeEach(async () => {
       // Mint saveToken

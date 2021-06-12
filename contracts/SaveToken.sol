@@ -286,6 +286,13 @@ contract SaveToken is ERC20Extended, Pausable {
     }
 
     /// @dev Returns the user's asset token balance
+    /// @return Returns addresses for underlyingToken, assetAdapter, assetToken. insuranceAdapter, insuranceToken
+    function getAddresses() public view returns (address, address, address, address, address)
+        {
+        return StorageLib.getAddresses();
+    }
+
+    /// @dev Returns the user's asset token balance
     /// @return Returns the asset balance
     function getAssetBalance(address account) public view returns (uint256) {
         return StorageLib.getAssetBalance(account);
