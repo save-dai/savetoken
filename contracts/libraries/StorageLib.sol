@@ -11,7 +11,6 @@ library StorageLib {
     );
 
     struct SaveTokenStorage {
-        mapping(bytes4 => bool) supportedInterfaces;
         address underlyingToken;
         address assetAdapter;
         address insuranceAdapter;
@@ -21,7 +20,9 @@ library StorageLib {
         address saveToken;
         address admin;
         IERC20 underlyingInstance;
+        // TODO: remove assetBalances mapping
         mapping(address => uint256) assetBalances;
+        // TODO: remove insuranceBalances mapping
         mapping(address => uint256) insuranceBalances;
     }
 
@@ -58,20 +59,24 @@ library StorageLib {
         st.underlyingInstance = IERC20(_underlyingToken);
     }
 
+    // TODO: Remove as we will instead read balances directly from proxies
     function updateAssetBalance(address _user, uint256 _amount) internal {
         SaveTokenStorage storage st = saveTokenStorage();
         st.assetBalances[_user] = _amount;
     }
 
+    // TODO: Remove as we will instead read balances directly from proxies
     function updateInsuranceBalance(address _user, uint256 _amount) internal {
         SaveTokenStorage storage st = saveTokenStorage();
         st.insuranceBalances[_user] = _amount;
     }
 
+    //TODO: Update so this reads balances from the account's proxy
     function getAssetBalance(address _user) internal view returns (uint256) {
         return saveTokenStorage().assetBalances[_user];
     }
 
+    //TODO: Update so this reads balances from the account's proxy
     function getInsuranceBalance(address _user) internal view returns (uint256) {
         return saveTokenStorage().insuranceBalances[_user];
     }

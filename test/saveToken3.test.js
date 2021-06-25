@@ -99,7 +99,7 @@ contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts)
       // Mint saveToken
       await saveDaiAaveInstance.mint(amount, { from: userWallet1 });
     });
-    it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+    it('should decrease insuranceTokens and assetTokens from the user\'s proxy', async () => {
       // identify initial balances
       const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
       const insuranceBalanceInitial = await insuranceToken.balanceOf(saveDaiAaveAddress);
@@ -159,37 +159,37 @@ contract.only('SaveDAI_Aave_MockInsurance_Expires_XX_XXX_XXXX', async (accounts)
       await expectRevert(saveDaiAaveInstance.withdrawAll({ from: nonUserWallet }),
 	    'Balance must be greater than 0');
     });
-    it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
-	  // identify initial balances
-	  const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
-	  const insuranceBalanceInitial = await insuranceToken.balanceOf(saveDaiAaveAddress);
+    it('should decrease insuranceTokens and assetTokens from the user\'s proxy', async () => {
+  	  // identify initial balances
+  	  const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
+  	  const insuranceBalanceInitial = await insuranceToken.balanceOf(saveDaiAaveAddress);
 
-	  // unbundle userWallet1's SaveTokens
-	  await saveDaiAaveInstance.withdrawAll({ from: userWallet1 });
+  	  // unbundle userWallet1's SaveTokens
+  	  await saveDaiAaveInstance.withdrawAll({ from: userWallet1 });
 
-	  // identify final balances
-	  const aDAIbalanceFinal = await aDai.balanceOf(saveDaiAaveAddress);
-	  const insuranceBalanceFinal = await insuranceToken.balanceOf(saveDaiAaveAddress);
+  	  // identify final balances
+  	  const aDAIbalanceFinal = await aDai.balanceOf(saveDaiAaveAddress);
+  	  const insuranceBalanceFinal = await insuranceToken.balanceOf(saveDaiAaveAddress);
 
-	  diffInaDai = aDAIbalanceInitial.sub(aDAIbalanceFinal);
-	  diffInInsurance = insuranceBalanceInitial.sub(insuranceBalanceFinal);
+  	  diffInaDai = aDAIbalanceInitial.sub(aDAIbalanceFinal);
+  	  diffInInsurance = insuranceBalanceInitial.sub(insuranceBalanceFinal);
 
-	  assert.equal(diffInInsurance.toString(), amount.toString());
+  	  assert.equal(diffInInsurance.toString(), amount.toString());
     });
     it('should send msg.sender all of the underlying asset', async () => {
-	  initialUnderlyingBalance = await dai.balanceOf(userWallet1);
+  	  initialUnderlyingBalance = await dai.balanceOf(userWallet1);
 
-	  // NOTE: not selling mock insurance tokens for underlying
-	  // the diffInDai in this mock instance only accounts for
-	  // withdrawing from Aave lending pool
+  	  // NOTE: not selling mock insurance tokens for underlying
+  	  // the diffInDai in this mock instance only accounts for
+  	  // withdrawing from Aave lending pool
 
-	  await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
+  	  await saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
 
-	  finalUnderlyingBalance = await dai.balanceOf(userWallet1);
+  	  finalUnderlyingBalance = await dai.balanceOf(userWallet1);
 
-	  let diffInDai = finalUnderlyingBalance.sub(initialUnderlyingBalance);
+  	  let diffInDai = finalUnderlyingBalance.sub(initialUnderlyingBalance);
 
-	  assert.equal(amount.toString(), diffInDai.toString());
+  	  assert.equal(amount.toString(), diffInDai.toString());
     });
     it('should emit a WithdrawAll event with the msg.sender\'s address and the amount of SaveTokens unbundled', async () => {
       // unbundle all of userWallet1's tokens

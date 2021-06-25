@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../libraries/StorageLib.sol";
 import "../../interfaces/IInsurance.sol";
-import "../../utils/MockInsuranceToken.sol";
+import "../../token/MockInsuranceToken.sol";
 
 contract MockInsurance is IInsurance {
     using SafeMath for uint256;
