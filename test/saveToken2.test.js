@@ -393,7 +393,7 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       await expectRevert(saveDaiAaveInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
         'Balance must be greater than 0');
     });
-    it('should decrease insuranceTokens and assetTokens from SaveToken contract', async () => {
+    it('should decrease insuranceTokens and assetTokens from the user\'s proxy', async () => {
       // identify initial balances
       const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
       const covADaibalance = await covADai.balanceOf(saveDaiAaveAddress);
@@ -459,7 +459,7 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       const diff = initialBalance - finalBalance;
       assert.equal(diff, amount);
     });
-    it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+    it('should decrease the user\'s assetTokens and insuranceTokens balances from their proxy', async () => {
       const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
       const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 
@@ -490,7 +490,7 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       await expectRevert(saveDaiAaveInstance.withdrawAll({ from: nonUserWallet }),
         'Balance must be greater than 0');
     });
-    it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+    it('should decrease insuranceTokens and assetTokens from the user\'s proxy', async () => {
       // identify initial balances
       const aDAIbalanceInitial = await aDai.balanceOf(saveDaiAaveAddress);
       const covADaibalance = await covADai.balanceOf(saveDaiAaveAddress);
@@ -548,7 +548,7 @@ contract('SaveDAI_Aave_Cover_Expires_31_May_2021', async (accounts) => {
       const wallet = web3.utils.toChecksumAddress(userWallet1);
       expectEvent(withdrawalReceipt, 'WithdrawAll', { amount: amount, user: wallet });
     });
-    it('should empty the user\'s assetTokens and insuranceTokens balances', async () => {
+    it('should empty the assetToken and insuranceToken balances from the user\'s proxy', async () => {
       const initialAssetBalance = await saveDaiAaveInstance.getAssetBalance(userWallet1);
       const initialInsuranceBalance = await saveDaiAaveInstance.getInsuranceBalance(userWallet1);
 

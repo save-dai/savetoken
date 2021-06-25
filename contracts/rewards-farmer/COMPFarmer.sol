@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+//TODO: Refactor and use as a generic proxy for all users that will store their asset tokens, insurance tokens, and rewards tokens
+
 pragma solidity >=0.6.0 <0.8.0;
 pragma abicoder v2;
 

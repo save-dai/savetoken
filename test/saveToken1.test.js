@@ -44,7 +44,7 @@ const lensAddress = web3.utils.toChecksumAddress('0xd513d22422a3062Bd342Ae374b4b
 const comptrollerAddress = web3.utils.toChecksumAddress('0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b');
 
 // OPYN COMPOUND TOKEN
-contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
+contract.only('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
   const owner = accounts[0];
   const userWallet1 = accounts[1];
   const nonUserWallet = accounts[2];
@@ -459,7 +459,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       await expectRevert(saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: nonUserWallet }),
         'Balance must be greater than 0');
     });
-    it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+    it('should decrease insuranceTokens and assetTokens from the user\'s proxy', async () => {
       // identify initial balances
       const cDaiBalanceInitial = await cDai.balanceOf(proxyAddress);
       const ocDaiBalanceInitial = await ocDai.balanceOf(saveDaiAddress);
@@ -510,27 +510,6 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
 
       assert.approximately(daiBoughtTotal, diff, 0.0000009);
     });
-    it('should send msg.sender all of the rewards tokens they\'ve yielded', async () => {
-      const userCompBalance = await comp.balanceOf(userWallet1);
-
-      const metaData1 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptrollerAddress, userWallet1).call();
-      const metaDataBalance1 = metaData1[0];
-
-      assert.equal(metaDataBalance1, userCompBalance);
-
-      await time.advanceBlock();
-
-      await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
-
-      const userCompBalance2 = await comp.balanceOf(userWallet1);
-
-      const metaData2 = await lensContract.methods.getCompBalanceMetadataExt(
-        compAddress, comptrollerAddress, userWallet1).call();
-      const metaDataBalance2 = metaData2[0];
-
-      assert.equal(metaDataBalance2, userCompBalance2);
-    });
     it('should emit a WithdrawForUnderlyingAsset event with the msg.sender\'s address and the amount of SaveTokens withdrawn', async () => {
       // unbundle userWallet1's tokens
       const withdrawalReceipt = await saveDaiInstance.withdrawForUnderlyingAsset(amount, { from: userWallet1 });
@@ -548,7 +527,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const diff = initialBalance - finalBalance;
       assert.equal(diff, amount);
     });
-    it('should decrease the user\'s assetTokens and insuranceTokens balances', async () => {
+    it('should decrease the user\'s assetTokens and insuranceTokens balances from their proxy', async () => {
       const initialAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
       const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 
@@ -617,7 +596,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       await expectRevert(saveDaiInstance.withdrawAll({ from: nonUserWallet }),
         'Balance must be greater than 0');
     });
-    it('should decrease insuranceTokens from SaveToken contract and assetTokens from farmer', async () => {
+    it('should decrease insuranceTokens and assetTokens from the user\'s proxy', async () => {
       // identify initial balances
       const cDaiBalanceInitial = await cDai.balanceOf(proxyAddress);
       const ocDaiBalanceInitial = await ocDai.balanceOf(saveDaiAddress);
@@ -696,7 +675,7 @@ contract('SaveDAI_Compound_Opyn_Expires_31_Feb_2021', async (accounts) => {
       const wallet = web3.utils.toChecksumAddress(userWallet1);
       expectEvent(withdrawalReceipt, 'WithdrawAll', { amount: amount, user: wallet });
     });
-    it('should empty the user\'s assetTokens and insuranceTokens balances', async () => {
+    it('should empty the assetToken and insuranceToken balances from the user\'s proxy', async () => {
       const initialAssetBalance = await saveDaiInstance.getAssetBalance(userWallet1);
       const initialInsuranceBalance = await saveDaiInstance.getInsuranceBalance(userWallet1);
 

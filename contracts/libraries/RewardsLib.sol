@@ -3,6 +3,8 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
+//TODO: Can we remove this library and move all proxy related storage requirements to the StorageLib? 
+
 library RewardsLib {
     bytes32 constant SAVETOKEN_REWARDS = keccak256(
         "save.token.rewards.storage"

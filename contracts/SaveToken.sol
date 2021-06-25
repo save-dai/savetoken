@@ -73,11 +73,6 @@ contract SaveToken is ERC20Extended, Pausable {
         }
 
         ERC20StorageLib.setERC20Metadata(name, symbol, decimals);
-
-        StorageLib.SaveTokenStorage storage st = StorageLib.saveTokenStorage();
-
-        // solhint-disable-next-line
-        st.supportedInterfaces[type(IERC165).interfaceId] = true;
     }
 
     /// @notice This function mints SaveTokens
@@ -234,10 +229,12 @@ contract SaveToken is ERC20Extended, Pausable {
         // amount of the underlying to withdraw
         uint256 underlyingToWithdraw = updatedUnderlyingBalance.sub(initialUnderlyingBalance);
 
+        // TODO: Remove as we will not be manually storing balances, but instead reading them from the proxies
         // update asset and insurance token balances
         StorageLib.updateAssetBalance(
             msg.sender, getAssetBalance(msg.sender).sub(assetWithdrawAmount)
         );
+        // TODO: Remove as we will not be manually storing balances, but instead reading them from the proxies
         StorageLib.updateInsuranceBalance(
             msg.sender, getInsuranceBalance(msg.sender).sub(insuranceWithdrawAmount)
         ); 
@@ -295,18 +292,21 @@ contract SaveToken is ERC20Extended, Pausable {
     /// @dev Returns the user's asset token balance
     /// @return Returns the asset balance
     function getAssetBalance(address account) public view returns (uint256) {
+        //TODO: Update so this reads balances from the account's proxy
         return StorageLib.getAssetBalance(account);
     }
 
     /// @dev Returns the user's insurance token balance
     /// @return Returns the insurance balance
     function getInsuranceBalance(address account) public view returns (uint256) {
+        //TODO: Update so this reads balances from the account's proxy
         return StorageLib.getInsuranceBalance(account);
     }
 
     /// @dev Returns the rewards token balance that has accured
     /// @return Returns the balance of rewards tokens
     function getRewardsBalance(address account) external view returns (uint256) {
+        //TODO: Update so this reads balances from the account's proxy
         bytes memory signature_getRewardsBalance = abi.encodeWithSignature(
             "getRewardsBalance(address)",
             account
