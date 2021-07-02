@@ -2,11 +2,11 @@
 pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../interfaces/external/IUniswapExchange.sol";
+import "../interfaces/external/IUniswapFactory.sol";
+import "../interfaces/external/IOToken.sol";
 import "../interfaces/IInsurance.sol";
 import "../libraries/StorageLib.sol";
-import "../interfaces/IUniswapExchange.sol";
-import "../interfaces/IUniswapFactory.sol";
-import "../interfaces/IOToken.sol";
 
 contract OpynAdapter is IInsurance {
 
@@ -32,6 +32,16 @@ contract OpynAdapter is IInsurance {
             );
     }
 
+    function claim(bytes memory data)
+        external
+        pure
+        override(IInsurance)
+        returns (uint256)
+        {
+        data = '0';
+        return 0;
+    }
+
     function sellInsurance(uint256 amount) 
         external 
         override(IInsurance)
@@ -44,15 +54,14 @@ contract OpynAdapter is IInsurance {
         // gives uniswap exchange allowance to transfer ocDAI tokens
         require(ocToken.approve(address(ocDaiExchange), amount));
 
-        uint256 underlyingTokens = isActive() ?
+        uint256 underlyingTokens = 
             ocDaiExchange.tokenToTokenSwapInput (
                 amount, // tokens sold
                 1, // min_tokens_bought
                 1, // min eth bought
                 1099511627776, // deadline
                 address(underlyingToken) // token address
-            )
-        : 0;
+            );
         return underlyingTokens;
     }
 
@@ -78,18 +87,6 @@ contract OpynAdapter is IInsurance {
         return underlyingExchange.getTokenToEthOutputPrice(ethToPay);
     }
 
-    /// @dev Check expiration status of insurance token
-    /// @return Returns true if insurance token has NOT expired
-    function isActive() 
-        public 
-        view
-        override(IInsurance) 
-        returns (bool) 
-        {
-        IOToken ocToken = IOToken(StorageLib.insuranceToken());
-        return !ocToken.hasExpired();
-    }
-
     /***************
     INTERNAL FUNCTIONS
     ***************/
@@ -102,11 +99,11 @@ contract OpynAdapter is IInsurance {
         returns 
         (IUniswapExchange) 
         {
-        address uniswapFactoryAddress = StorageLib.uniswapFactory();
-        IUniswapFactory uniswapFactory = IUniswapFactory(uniswapFactoryAddress);
+        address uniswapFactoryAddress = StorageLib.exchangeFactory();
+        IUniswapFactory exchangeFactory = IUniswapFactory(uniswapFactoryAddress);
 
         IUniswapExchange exchange = IUniswapExchange(
-            uniswapFactory.getExchange(address(_tokenAddress))
+            exchangeFactory.getExchange(address(_tokenAddress))
         );
         return exchange;
     }

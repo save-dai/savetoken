@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./libraries/ERC20StorageLib.sol";
 import "./libraries/RewardsLib.sol";
 import "./libraries/StorageLib.sol";
-import "./interfaces/ISaveToken.sol";
 import "./interfaces/IERC165.sol";
 import "./interfaces/IInsurance.sol";
 import "./interfaces/IAsset.sol";
+import "./interfaces/external/IClaimManagement.sol";
 import "./token/ERC20Extended.sol";
 import "./utils/Pausable.sol";
 
@@ -22,8 +22,16 @@ contract SaveToken is ERC20Extended, Pausable {
     ***************/
     event Mint(uint256 amount, address user);
     event WithdrawForUnderlyingAsset(uint256 amount, address user);
+    event WithdrawAll(uint256 amount, address user);
     event WithdrawReward(uint256 amount, address user);
-    event RewardsBalance(uint256 amount, address user);
+    event Claimed();
+
+    /// @dev Throws if msg.sender has no SaveTokens
+    modifier onlySavers() {
+        require(super.balanceOf(msg.sender) > 0, 
+            "Balance must be greater than 0");
+        _;
+    }
 
     /*
      * @param underlyingTokenAddress The underlying token address
@@ -65,11 +73,6 @@ contract SaveToken is ERC20Extended, Pausable {
         }
 
         ERC20StorageLib.setERC20Metadata(name, symbol, decimals);
-
-        StorageLib.SaveTokenStorage storage st = StorageLib.saveTokenStorage();
-
-        // solhint-disable-next-line
-        st.supportedInterfaces[type(IERC165).interfaceId] = true;
     }
 
     /// @notice This function mints SaveTokens
@@ -111,13 +114,15 @@ contract SaveToken is ERC20Extended, Pausable {
         uint256 assetTokens = _delegatecall(StorageLib.assetAdapter(), signature_hold);
         uint256 insuranceTokens = _delegatecall(StorageLib.insuranceAdapter(), signature_buy);
 
-        require(assetTokens == amount, "assetTokens must equal amount");
-        require(insuranceTokens == amount, "insuranceTokens must equal amount");
-
-        _mint(msg.sender, amount);
-
         // update asset and insurance token balances
-        _addToBalances(msg.sender, amount);
+        StorageLib.updateAssetBalance(
+            msg.sender, getAssetBalance(msg.sender).add(assetTokens)
+        );
+        StorageLib.updateInsuranceBalance(
+            msg.sender, getInsuranceBalance(msg.sender).add(insuranceTokens)
+        );
+        
+        _mint(msg.sender, amount);
         
         emit Mint(amount, msg.sender);
 
@@ -140,12 +145,12 @@ contract SaveToken is ERC20Extended, Pausable {
             _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
+        // transfer asset and insurance tokens
+        _transferTokens(msg.sender, recipient, amount);
+
+
         // transfer saveTokens
         super.transfer(recipient, amount);
-
-        // update asset and insurance token balances
-        _subtractFromBalances(msg.sender, amount);
-        _addToBalances(recipient, amount);
 
         return true;
     }
@@ -172,41 +177,97 @@ contract SaveToken is ERC20Extended, Pausable {
             _delegatecall(StorageLib.assetAdapter(), signature_transfer);
         }
 
+        // transfer asset and insurance tokens
+        _transferTokens(sender, recipient, amount);
+
         // transfer saveTokens
         super.transferFrom(sender, recipient, amount);
-
-        // update asset and insurance token balances
-        _subtractFromBalances(sender, amount);
-        _addToBalances(recipient, amount);
 
         return true;
     }
 
+    /// @notice Allows user to exercise their insurance
+    /// @param data custom bytes
+    function claim(bytes memory data) external {
+
+        bytes memory signature_claim = abi.encodeWithSignature(
+            "claim(bytes)",
+            data
+        );
+
+        _delegatecall(StorageLib.insuranceAdapter(), signature_claim);
+
+        emit Claimed();
+
+    }
+
     /// @notice This function will unbundle your SaveTokens for your underlying asset
     /// @param amount The number of SaveTokens to unbundle
-    function withdrawForUnderlyingAsset(uint256 amount) external {
+    function withdrawForUnderlyingAsset(uint256 amount) public onlySavers {
+        // calculate ratio of amounts for the saveTokens that don't have a 1:1:1 mapping
+        (,,uint256 assetWithdrawAmount, uint256 insuranceWithdrawAmount) = _calculateRatioAmounts(msg.sender, amount);
+
         bytes memory signature_withdraw = abi.encodeWithSignature(
             "withdraw(uint256)",
-            amount
+            assetWithdrawAmount
         );
 
         bytes memory signature_sellInsurance = abi.encodeWithSignature(
             "sellInsurance(uint256)",
-            amount
+            insuranceWithdrawAmount
         );
 
-        uint256 underlyingForAsset = _delegatecall(StorageLib.assetAdapter(), signature_withdraw);
-        uint256 underlyingForInsurance = _delegatecall(StorageLib.insuranceAdapter(), signature_sellInsurance);
+        // initial underlying balance
+        uint256 initialUnderlyingBalance = StorageLib.underlyingInstance().balanceOf(address(this));
+
+        _delegatecall(StorageLib.assetAdapter(), signature_withdraw);
+        _delegatecall(StorageLib.insuranceAdapter(), signature_sellInsurance);
+
+        // updated underlying balance
+        uint256 updatedUnderlyingBalance = StorageLib.underlyingInstance().balanceOf(address(this));
+
+        // amount of the underlying to withdraw
+        uint256 underlyingToWithdraw = updatedUnderlyingBalance.sub(initialUnderlyingBalance);
+
+        // TODO: Remove as we will not be manually storing balances, but instead reading them from the proxies
+        // update asset and insurance token balances
+        StorageLib.updateAssetBalance(
+            msg.sender, getAssetBalance(msg.sender).sub(assetWithdrawAmount)
+        );
+        // TODO: Remove as we will not be manually storing balances, but instead reading them from the proxies
+        StorageLib.updateInsuranceBalance(
+            msg.sender, getInsuranceBalance(msg.sender).sub(insuranceWithdrawAmount)
+        ); 
 
         //transfer underlying to msg.sender
-        require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingForAsset.add(underlyingForInsurance)));
-
-        // update asset and insurance token balances
-        _subtractFromBalances(msg.sender, amount);
+        require(StorageLib.underlyingInstance().transfer(msg.sender, underlyingToWithdraw));
 
         emit WithdrawForUnderlyingAsset(amount, msg.sender);
 
         _burn(msg.sender, amount);
+    }
+
+    /// @notice This function will withdraw all reward tokens
+    /// @return amount Returns the amount of reward tokens withdrawn
+    function withdrawReward() public returns (uint256) {
+        bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
+
+        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
+
+        emit WithdrawReward(balance, msg.sender);
+        return balance;
+    }
+
+    /// @notice This function will withdraw all underlying & reward tokens
+    function withdrawAll() external onlySavers {
+        uint256 balance = super.balanceOf(msg.sender);
+        // unbundle SaveTokens for all of your underlying assets
+        withdrawForUnderlyingAsset(balance);
+
+        // withdraw all reward tokens
+        withdrawReward();
+
+        emit WithdrawAll(balance, msg.sender);
     }
 
     /// @notice Allows admin to pause contract
@@ -221,50 +282,92 @@ contract SaveToken is ERC20Extended, Pausable {
         _unpause();
     }
 
-    /// @notice This function will withdraw all reward tokens
-    /// @return amount Returns the amount of reward tokens withdrawn
-    function withdrawReward() external returns (uint256) {
-        bytes memory signature_withdrawReward = abi.encodeWithSignature("withdrawReward()");
-
-        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_withdrawReward);
-
-        emit WithdrawReward(balance, msg.sender);
-        return balance;
+    /// @dev Returns the user's asset token balance
+    /// @return Returns addresses for underlyingToken, assetAdapter, assetToken. insuranceAdapter, insuranceToken
+    function getAddresses() public view returns (address, address, address, address, address)
+        {
+        return StorageLib.getAddresses();
     }
 
     /// @dev Returns the user's asset token balance
     /// @return Returns the asset balance
-    function getAssetBalance(address account) external view returns (uint256) {
+    function getAssetBalance(address account) public view returns (uint256) {
+        //TODO: Update so this reads balances from the account's proxy
         return StorageLib.getAssetBalance(account);
     }
 
     /// @dev Returns the user's insurance token balance
     /// @return Returns the insurance balance
-    function getInsuranceBalance(address account) external view returns (uint256) {
+    function getInsuranceBalance(address account) public view returns (uint256) {
+        //TODO: Update so this reads balances from the account's proxy
         return StorageLib.getInsuranceBalance(account);
     }
 
     /// @dev Returns the rewards token balance that has accured
     /// @return Returns the balance of rewards tokens
-    function getRewardsBalance() external returns (uint256) {
-        bytes memory signature_getRewardsBalance = abi.encodeWithSignature("getRewardsBalance()");
-        uint256 balance = _delegatecall(StorageLib.assetAdapter(), signature_getRewardsBalance);
-        
-        emit RewardsBalance(balance, msg.sender);
+    function getRewardsBalance(address account) external view returns (uint256) {
+        //TODO: Update so this reads balances from the account's proxy
+        bytes memory signature_getRewardsBalance = abi.encodeWithSignature(
+            "getRewardsBalance(address)",
+            account
+        );
+
+        uint256 balance = _staticcall(StorageLib.assetAdapter(), signature_getRewardsBalance);
+
         return balance;
     }
 
     /***************
     INTERNAL FUNCTIONS
     ***************/
-    function _addToBalances(address user, uint256 amount) internal {
-        StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).add(amount));
-        StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).add(amount));
+
+    function _transferTokens(        
+        address sender,
+        address recipient,
+        uint256 amount
+        )
+        internal 
+        {
+        // calculate ratio of amounts for the saveTokens that don't have a 1:1:1 mapping
+        (
+        uint256 assetBalance, 
+        uint256 insuranceBalance, 
+        uint256 assetTransferAmount,
+        uint256 insuranceTransferAmount) = _calculateRatioAmounts(sender, amount
+        );
+
+        StorageLib.updateAssetBalance(
+            sender, assetBalance.sub(assetTransferAmount)
+        );
+        StorageLib.updateInsuranceBalance(
+            sender, insuranceBalance.sub(insuranceTransferAmount)
+        ); 
+        StorageLib.updateAssetBalance(
+            recipient, getAssetBalance(recipient).add(assetTransferAmount)
+        );
+        StorageLib.updateInsuranceBalance(
+            recipient, getInsuranceBalance(recipient).add(insuranceTransferAmount)
+        ); 
     }
 
-    function _subtractFromBalances(address user, uint256 amount) internal {
-        StorageLib.updateAssetBalance(user, StorageLib.getAssetBalance(user).sub(amount));
-        StorageLib.updateInsuranceBalance(user, StorageLib.getInsuranceBalance(user).sub(amount)); 
+    function _calculateRatioAmounts(address user, uint256 amount) 
+        internal
+        view
+        returns (uint256, uint256, uint256, uint256)
+        {
+        // calculate ratio of amounts, and multiply by asset and insurance token 
+        // balances. This is for the saveTokens that don't have a
+        // 1:1:1 mapping (saveToken:assetToken:insuranceToken)
+        uint256 balance = super.balanceOf(user);
+        uint256 ratio = amount.div(balance);
+
+        uint256 assetBalance = getAssetBalance(user);
+        uint256 insuranceBalance = getInsuranceBalance(user);
+
+        uint256 assetWithdrawAmount = ratio.mul(assetBalance);
+        uint256 insuranceWithdrawAmount = ratio.mul(insuranceBalance);
+
+        return (assetBalance, insuranceBalance, assetWithdrawAmount, insuranceWithdrawAmount);
     }
 
     function _delegatecall(address adapterAddress, bytes memory sig)
@@ -285,8 +388,28 @@ contract SaveToken is ERC20Extended, Pausable {
             )
             ret := mload(output)
         }
-        require(success, "must successfully execute delegatecall");
         return ret;
     }
-    
+
+    function _staticcall(address adapterAddress, bytes memory sig)
+        internal
+        view
+        returns (uint256)
+        {
+        uint256 ret;
+        bool success;
+        assembly {
+            let output := mload(0x40)
+            success := staticcall(
+                gas(),
+                adapterAddress,
+                add(sig, 32),
+                mload(sig),
+                output,
+                0x20
+            )
+            ret := mload(output)
+        }
+        return ret;
+    }
 }

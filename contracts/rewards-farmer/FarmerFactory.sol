@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// TODO: Rename to something like SavingsFactory? Every Adapter will inherit from SavingsFactory
 
 pragma solidity >=0.6.0 <0.8.0;
 

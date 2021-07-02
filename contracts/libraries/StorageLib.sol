@@ -11,17 +11,18 @@ library StorageLib {
     );
 
     struct SaveTokenStorage {
-        mapping(bytes4 => bool) supportedInterfaces;
         address underlyingToken;
         address assetAdapter;
         address insuranceAdapter;
         address assetToken;
         address insuranceToken;
-        address uniswapFactory;
+        address exchangeFactory;
         address saveToken;
         address admin;
         IERC20 underlyingInstance;
+        // TODO: remove assetBalances mapping
         mapping(address => uint256) assetBalances;
+        // TODO: remove insuranceBalances mapping
         mapping(address => uint256) insuranceBalances;
     }
 
@@ -42,7 +43,7 @@ library StorageLib {
         address _assetToken,
         address _insuranceAdapter,
         address _insuranceToken,
-        address _uniswapFactory,
+        address _exchangeFactory,
         address _saveToken,
         address _admin
     ) internal {
@@ -52,26 +53,30 @@ library StorageLib {
         st.assetToken = _assetToken;
         st.insuranceAdapter = _insuranceAdapter;
         st.insuranceToken = _insuranceToken;
-        st.uniswapFactory = _uniswapFactory;
+        st.exchangeFactory = _exchangeFactory;
         st.saveToken = _saveToken;
         st.admin = _admin;
         st.underlyingInstance = IERC20(_underlyingToken);
     }
 
+    // TODO: Remove as we will instead read balances directly from proxies
     function updateAssetBalance(address _user, uint256 _amount) internal {
         SaveTokenStorage storage st = saveTokenStorage();
         st.assetBalances[_user] = _amount;
     }
 
+    // TODO: Remove as we will instead read balances directly from proxies
     function updateInsuranceBalance(address _user, uint256 _amount) internal {
         SaveTokenStorage storage st = saveTokenStorage();
         st.insuranceBalances[_user] = _amount;
     }
 
+    //TODO: Update so this reads balances from the account's proxy
     function getAssetBalance(address _user) internal view returns (uint256) {
         return saveTokenStorage().assetBalances[_user];
     }
 
+    //TODO: Update so this reads balances from the account's proxy
     function getInsuranceBalance(address _user) internal view returns (uint256) {
         return saveTokenStorage().insuranceBalances[_user];
     }
@@ -100,8 +105,8 @@ library StorageLib {
         assetToken_ = saveTokenStorage().insuranceToken;
     }
 
-    function uniswapFactory() internal view returns (address uniswapFactory_) {
-        uniswapFactory_ = saveTokenStorage().uniswapFactory;
+    function exchangeFactory() internal view returns (address exchangeFactory_) {
+        exchangeFactory_ = saveTokenStorage().exchangeFactory;
     }
 
     function saveToken() internal view returns (address saveToken_) {
@@ -110,5 +115,13 @@ library StorageLib {
     
     function admin() internal view returns (address admin_) {
         admin_ = saveTokenStorage().admin;
+    }
+
+    function getAddresses() 
+        internal 
+        view 
+        returns (address, address, address, address, address)
+        {
+        return (underlyingToken(), assetAdapter(), assetToken(), insuranceAdapter(), insuranceToken());
     }
 }

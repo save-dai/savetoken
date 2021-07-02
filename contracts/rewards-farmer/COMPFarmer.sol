@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 
+//TODO: Refactor and use as a generic proxy for all users 
+// ... that will store their asset tokens, insurance tokens, and rewards tokens
+
 pragma solidity >=0.6.0 <0.8.0;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../interfaces/IComptrollerLens.sol";
-import "../interfaces/ICToken.sol";
+import "../interfaces/external/IComptrollerLens.sol";
+import "../interfaces/external/ICToken.sol";
 import "./Farmer.sol";
 
  /// @dev The COMPFarmer contract inherits from the base Farmer contract and
@@ -66,8 +70,7 @@ contract COMPFarmer is Farmer {
         return true;
     }
 
-    /// @dev Redeems the cToken asset token for DAI and withdraws
-    /// the rewards / governance tokens that have accrued.
+    /// @dev Redeems the cToken asset token for DAI
     /// @param amount The amount of cToken to redeem.
     /// @param user The address to send the DAI to.
     function redeem(uint256 amount, address user) external onlyOwner {
@@ -77,19 +80,6 @@ contract COMPFarmer is Farmer {
         // identify DAI balance and transfer
         uint256 daiBalance = underlying.balanceOf(address(this));
         require(underlying.transfer(user, daiBalance), "must transfer");
-
-        // withdraw reward
-        withdrawReward(user);
-    }
-
-    /// @dev Returns the COMP balance that has accured in the contract.
-    /// @return Returns the balance of COMP in the contract.
-    function getTotalCOMPEarned() external onlyOwner returns (uint256) {
-        IComptrollerLens comptroller = IComptrollerLens(address(cToken.comptroller()));
-        comptroller.claimComp(address(this));
-
-        uint256 balance = comp.balanceOf(address(this));
-        return balance;
     }
 
     /// @dev Allows user to withdraw the accrued COMP tokens at any time.
